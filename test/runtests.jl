@@ -1,6 +1,5 @@
 
 using Base.Test
-push!(LOAD_PATH,"C:\\Users\\op\\Documents\\Julia Projects\\IncrementalPruning.jl\\src")
 using POMDPs, POMDPModels, POMDPToolbox
 using IncrementalPruning
 
