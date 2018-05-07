@@ -3,4 +3,5 @@ POMDPs
 POMDPModels
 POMDPToolbox
 ParticleFilters
-JuMP, Clp
+JuMP
+Clp
