@@ -84,7 +84,7 @@ using IncrementalPruning
         talphavec = AlphaVec(zeros(ns), A[1])
         talphavec2 = AlphaVec(ones(ns), A[2])
         tpolicy = PrunePolicy(pomdp,[talphavec, talphavec2])
-        b = DiscreteBelief([0.8,0.2])
+        b = POMDPToolbox.DiscreteBelief([0.8,0.2])
         @test action(tpolicy,b) == 1 # action "1" is optimal (action index = 2)
 
         # value
@@ -95,8 +95,8 @@ using IncrementalPruning
         talphavec = AlphaVec([1.0, 0.0], A[1])
         talphavec2 = AlphaVec([0.0, 1.0], A[2])
         tpolicy = PrunePolicy(pomdp,[talphavec, talphavec2])
-        b = DiscreteBelief([0.8,0.2])
-        b2 = DiscreteBelief([0.3,0.7])
+        b = POMDPToolbox.DiscreteBelief([0.8,0.2])
+        b2 = POMDPToolbox.DiscreteBelief([0.3,0.7])
         @test value(tpolicy, b) == 0.8 # α1 dominates
         @test value(tpolicy, b2) == 0.7 # α2 dominates
 
