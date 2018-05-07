@@ -1,0 +1,11 @@
+language: julia
+os:
+  - windows
+julia:
+  - 0.6
+notifications:
+  email: keith.andrew.j@gmail.com
+script:
+  - julia -e 'Pkg.clone(pwd()); Pkg.build("IncrementalPruning"); Pkg.test("IncrementalPruning"; coverage=true)'
+after_success:
+  - julia -e 'cd(Pkg.dir("IncrementalPruning")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
