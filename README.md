@@ -1,5 +1,7 @@
 # IncrementalPruning.jl
 
+[![Coverage Status](https://coveralls.io/repos/github/ajkeith/IncrementalPruning.jl/badge.svg?branch=master)](https://coveralls.io/github/ajkeith/IncrementalPruning.jl?branch=master)
+
 This Julia package implements the incremental pruning solver for partially observable Markov decision processes.
 
 For details, see Cassandra et al 1997.
