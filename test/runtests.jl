@@ -1,6 +1,6 @@
 
 using Base.Test
-push!(LOAD_PATH,"C:\\Users\\op\\Documents\\Julia Projects\\IncrementalPruning\\src")
+push!(LOAD_PATH,"C:\\Users\\op\\Documents\\Julia Projects\\IncrementalPruning.jl\\src")
 using POMDPs, POMDPModels, POMDPToolbox
 using IncrementalPruning
 
@@ -109,8 +109,8 @@ using IncrementalPruning
         talphavec = AlphaVec([1.0, 0.5], A[1])
         talphavec2 = AlphaVec([0.0, 2.0], A[2])
         tpolicy = PrunePolicy(pomdp,[talphavec, talphavec2])
-        @test PruneSolve.state_value(tpolicy, false) == 1.0 # α1 dominates
-        @test PruneSolve.state_value(tpolicy, true) == 2.0 # α2 dominates
+        @test IncrementalPruning.state_value(tpolicy, false) == 1.0 # α1 dominates
+        @test IncrementalPruning.state_value(tpolicy, true) == 2.0 # α2 dominates
 
         # diff value
         # return maximum difference in value functions

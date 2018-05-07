@@ -17,6 +17,9 @@ struct AlphaVec
     action::Any # action associated wtih alpha vector
 end
 
+# alpha vector default constructor
+AlphaVec() = AlphaVec([0.0], 0)
+
 # define alpha vector equality
 ==(a::AlphaVec, b::AlphaVec) = (a.alpha,a.action) == (b.alpha, b.action)
 Base.hash(a::AlphaVec, h::UInt) = hash(a.alpha, hash(a.action, h))
