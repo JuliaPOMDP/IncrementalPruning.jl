@@ -61,12 +61,12 @@ using IncrementalPruning
         @test dpval(α,a,z,prob) == valref
 
         # dpupdate
-        # return value may be incorrect
+        # return value unclear
         prob = BabyPOMDP()
         av1 = AlphaVec([1.0, -1.0], 1)
         av2 = AlphaVec([0.0, 1.0], 1)
         V0 = Set([av1, av2])
-        @test length(dpupdate(V0, prob)) == 3 # not sure if 3 is actually right
+        @test length(dpupdate(V0, prob)) == 3 # not sure why this is 3
     end
 
     @testset "Solver Functions" begin
@@ -99,7 +99,7 @@ using IncrementalPruning
         b2 = POMDPToolbox.DiscreteBelief([0.3,0.7])
         @test value(tpolicy, b) == 0.8 # α1 dominates
         @test value(tpolicy, b2) == 0.7 # α2 dominates
-
+b =
         # state value
         # return value function at a state
         pomdp = TigerPOMDP()

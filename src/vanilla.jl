@@ -70,6 +70,17 @@ function xsum(A::Set{AlphaVec}, B::Set{AlphaVec})
 end
 
 # cross sum - arrays
+"""
+    xsum(A,B)
+
+Compute the cross-sum of `A` and `B`.
+
+# Examples
+```julia-repl
+julia> xsum(Set([[1.0, 2.0]]), Set([[3.0, 4.0], [5.0, 6.0]]))
+Set(Array{Float64,1}[[4.0, 6.0], [6.0, 8.0]])
+```
+"""
 function xsum(A::Set{Array{Float64,1}}, B::Set{Array{Float64,1}})
     X = Set{Array{Float64,1}}()
     for a in A, b in B
