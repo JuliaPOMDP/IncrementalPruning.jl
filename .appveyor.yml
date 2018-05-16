@@ -6,9 +6,8 @@ environment:
 #   - JULIA_URL: "https://julialangnightlies-s3.julialang.org/bin/winnt/x64/julia-latest-win64.exe"
 
 branches:
-  only:
-    - master
-    - publication
+  except:
+    - robust
 
 notifications:
   - provider: Email
@@ -38,6 +37,3 @@ build_script:
 
 test_script:
   - C:\projects\julia\bin\julia -e "Pkg.test(\"IncrementalPruning\", coverage = true)"
-
-after_test:
-- C:\projects\julia\bin\julia -e "cd(Pkg.dir(\"IncrementalPruning\")); Pkg.add(\"Coverage\"); using Coverage; Coveralls.submit(process_folder())"
