@@ -25,7 +25,7 @@ AlphaVec() = AlphaVec([0.0], 0)
 Base.hash(a::AlphaVec, h::UInt) = hash(a.alpha, hash(a.action, h))
 
 # policy struct
-mutable struct PrunePolicy{P<:POMDP, A} <: Policy
+mutable struct PrunePolicy{P<:RPOMDP, A} <: Policy
     pomdp::P
     avecs::Vector{AlphaVec}
     alphas::Vector{Vector{Float64}}
@@ -33,7 +33,7 @@ mutable struct PrunePolicy{P<:POMDP, A} <: Policy
 end
 
 # policy default constructor
-function PrunePolicy(pomdp::POMDP)
+function PrunePolicy(pomdp::RPOMDP)
     ns = n_states(pomdp)
     na = n_actions(pomdp)
     S = ordered_states(pomdp)
@@ -45,13 +45,13 @@ function PrunePolicy(pomdp::POMDP)
 end
 
 # policy with alphavec constructor
-function PrunePolicy(pomdp::POMDP, avecs::Vector{AlphaVec})
+function PrunePolicy(pomdp::RPOMDP, avecs::Vector{AlphaVec})
     alphas = [avec.alpha for avec in avecs]
     action_map = [avec.action for avec in avecs]
     PrunePolicy(pomdp, avecs, alphas, action_map)
 end
 
-create_policy(solver::PruneSolver, pomdp::POMDP) = PrunePolicy(pomdp)
+create_policy(solver::PruneSolver, pomdp::RPOMDP) = PrunePolicy(pomdp)
 
 updater(p::PrunePolicy) = DiscreteUpdater(p.pomdp)
 
@@ -69,7 +69,6 @@ function xsum(A::Set{AlphaVec}, B::Set{AlphaVec})
     X
 end
 
-# cross sum - arrays
 """
     xsum(A,B)
 
@@ -242,9 +241,34 @@ function incprune(SZ::Array{Set{Array{Float64,1}},1})
     W
 end # incprune
 
+# # dynamic programming backup value
+# # (Cassandra, Littman, Zhang 1997)
+# function dpval(α::Array{Float64,1}, a, z, prob::POMDP)
+#     S = ordered_states(prob)
+#     A = ordered_actions(prob)
+#     ns = n_states(prob)
+#     nz = n_observations(prob)
+#     γ = discount(prob)
+#     τ = Array{Float64,1}(ns)
+#     for (sind,s) in enumerate(S)
+#         dist_t = transition(prob,s,a)
+#         exp_sum = 0.0
+#         for (spind, sp) in enumerate(S)
+#             dist_o = observation(prob,a,sp)
+#             pt = pdf(dist_t,sp)
+#             po = pdf(dist_o,z)
+#             exp_sum += α[spind] * po * pt
+#         end
+#         τ[sind] = (1 / nz) * reward(prob,s,a) + γ * exp_sum
+#     end
+#     τ
+# end
+
+# Robust backup value
 # dynamic programming backup value
+# (Osogami 2015)
 # (Cassandra, Littman, Zhang 1997)
-function dpval(α::Array{Float64,1}, a, z, prob::POMDP)
+function dpval(α::Array{Float64,1}, a, z, prob::RPOMDP)
     S = ordered_states(prob)
     A = ordered_actions(prob)
     ns = n_states(prob)
@@ -255,10 +279,11 @@ function dpval(α::Array{Float64,1}, a, z, prob::POMDP)
         dist_t = transition(prob,s,a)
         exp_sum = 0.0
         for (spind, sp) in enumerate(S)
-            dist_o = observation(prob,a,sp)
-            pt = pdf(dist_t,sp)
-            po = pdf(dist_o,z)
-            exp_sum += α[spind] * po * pt
+            uncset = RPOMDPs.observation(prob,a,sp)
+            po_low = pdf(uncset.lower, obs_index(prob, z))
+            po_hi = pdf(uncset.upper, obs_index(prob, z))
+            pt = pdf(dist_t, sp)
+            exp_sum += min(α[spind] * po_low * pt, α[spind] * po_hi * pt)
         end
         τ[sind] = (1 / nz) * reward(prob,s,a) + γ * exp_sum
     end
@@ -267,7 +292,7 @@ end
 
 # dynamic programming update
 # (Cassandra, Littman, Zhang 1997)
-function dpupdate(F::Set{AlphaVec}, prob::POMDP)
+function dpupdate(F::Set{AlphaVec}, prob::RPOMDP)
     alphas = [avec.alpha for avec in F]
     A = ordered_actions(prob)
     Z = ordered_observations(prob)
@@ -292,7 +317,7 @@ function dpupdate(F::Set{AlphaVec}, prob::POMDP)
 end
 
 # Find maximum difference between new value function and old value function
-function diffvalue(Vnew::Array{AlphaVec,1},Vold::Array{AlphaVec,1},pomdp::POMDP)
+function diffvalue(Vnew::Array{AlphaVec,1},Vold::Array{AlphaVec,1},pomdp::RPOMDP)
     ns = n_states(pomdp) # number of states in alpha vector
     S = ordered_states(pomdp)
     A = ordered_actions(pomdp)
@@ -334,7 +359,7 @@ function diffvalue(Vnew::Array{AlphaVec,1},Vold::Array{AlphaVec,1},pomdp::POMDP)
 end
 
 # solve POMDP with incremental pruning
-function solve(solver::PruneSolver, prob::POMDP)
+function solve(solver::PruneSolver, prob::RPOMDP)
     # println("Solver started...")
     ϵ = solver.tolerance
     replimit = solver.max_iterations
@@ -417,26 +442,26 @@ end
 
 value(policy::PrunePolicy, b::AbstractParticleBelief) = maximum(unnormalized_util(policy, b))/weight_sum(b)
 
-@POMDP_require solve(solver::PruneSolver, pomdp::POMDP) begin
-    P = typeof(pomdp)
-    S = state_type(P)
-    A = action_type(P)
-    @req discount(::P)
-    @req n_states(::P)
-    @req n_actions(::P)
-    @subreq ordered_states(pomdp)
-    @subreq ordered_actions(pomdp)
-    @req transition(::P,::S,::A)
-    @req reward(::P,::S,::A,::S)
-    @req state_index(::P,::S)
-    as = actions(pomdp)
-    ss = states(pomdp)
-    @req iterator(::typeof(as))
-    @req iterator(::typeof(ss))
-    s = first(iterator(ss))
-    a = first(iterator(as))
-    dist = transition(pomdp, s, a)
-    D = typeof(dist)
-    @req iterator(::D)
-    @req pdf(::D,::S)
-end
+# @POMDP_require solve(solver::PruneSolver, pomdp::RPOMDP) begin
+#     P = typeof(pomdp)
+#     S = state_type(P)
+#     A = action_type(P)
+#     @req discount(::P)
+#     @req n_states(::P)
+#     @req n_actions(::P)
+#     @subreq ordered_states(pomdp)
+#     @subreq ordered_actions(pomdp)
+#     @req transition(::P,::S,::A)
+#     @req reward(::P,::S,::A,::S)
+#     @req state_index(::P,::S)
+#     as = actions(pomdp)
+#     ss = states(pomdp)
+#     @req iterator(::typeof(as))
+#     @req iterator(::typeof(ss))
+#     s = first(iterator(ss))
+#     a = first(iterator(as))
+#     dist = transition(pomdp, s, a)
+#     D = typeof(dist)
+#     @req iterator(::D)
+#     @req pdf(::D,::S)
+# end

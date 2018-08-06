@@ -1,13 +1,13 @@
 module IncrementalPruning
 
-using POMDPs
-using POMDPToolbox
+using RPOMDPs
+using RPOMDPToolbox
 using ParticleFilters
 
 using JuMP, Clp
 
-import POMDPs: Solver, Policy
-import POMDPs: solve, action, value, update, initialize_belief, updater
+import RPOMDPs: Solver, Policy
+import RPOMDPs: solve, action, value, update, initialize_belief, updater
 import Base: ==, hash
 
 export
