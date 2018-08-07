@@ -32,6 +32,7 @@ export
     dpval,
     xsum
 
-include("vanilla.jl")
+include("incprune.jl")
+include("valueiteration.jl")
 
 end # module
