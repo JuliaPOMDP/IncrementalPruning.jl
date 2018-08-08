@@ -79,22 +79,16 @@ using IncrementalPruning
         # action
         # return best action at a belief
         pomdp = TigerPOMDP()
-        A = ordered_actions(pomdp)
         ns = n_states(pomdp)
-        talphavec = AlphaVec(zeros(ns), A[1])
-        talphavec2 = AlphaVec(ones(ns), A[2])
-        tpolicy = PrunePolicy(pomdp,[talphavec, talphavec2])
+        tpolicy = AlphaVectorPolicy(pomdp,[zeros(ns), ones(ns)])
         b = DiscreteBelief(pomdp, [0.8,0.2])
         @test action(tpolicy,b) == 1 # action "1" is optimal (action index = 2)
 
         # value
         # return value function at a belief
         pomdp = TigerPOMDP()
-        A = ordered_actions(pomdp)
         ns = n_states(pomdp)
-        talphavec = AlphaVec([1.0, 0.0], A[1])
-        talphavec2 = AlphaVec([0.0, 1.0], A[2])
-        tpolicy = PrunePolicy(pomdp,[talphavec, talphavec2])
+        tpolicy = AlphaVectorPolicy(pomdp,[[1.0, 0.0], [0.0, 1.0]])
         b = DiscreteBelief(pomdp, [0.8,0.2])
         b2 = DiscreteBelief(pomdp, [0.3,0.7])
         @test value(tpolicy, b) == 0.8 # α1 dominates
@@ -103,17 +97,15 @@ using IncrementalPruning
         # state value
         # return value function at a state
         pomdp = TigerPOMDP()
-        A = ordered_actions(pomdp)
         ns = n_states(pomdp)
-        talphavec = AlphaVec([1.0, 0.5], A[1])
-        talphavec2 = AlphaVec([0.0, 2.0], A[2])
-        tpolicy = PrunePolicy(pomdp,[talphavec, talphavec2])
+        tpolicy = AlphaVectorPolicy(pomdp,[[1.0, 0.5], [0.0, 2.0]])
         @test IncrementalPruning.state_value(tpolicy, false) == 1.0 # α1 dominates
         @test IncrementalPruning.state_value(tpolicy, true) == 2.0 # α2 dominates
 
         # diff value
         # return maximum difference in value functions
         pomdp = TigerPOMDP()
+        A = ordered_actions(pomdp)
         a1 = [4.0; 0.0]
         a2 = [0.0; 4.0]
         a3 = [-2.75; 2.75]

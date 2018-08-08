@@ -2,63 +2,77 @@
 ########### Incremental Pruning Solver #####################
 ############################################################
 
+"""
+    PruneSolver <: Solver
+
+POMDP solver type using the incremental pruning algorithm.
+"""
 mutable struct PruneSolver <: Solver
     max_iterations::Int64
     tolerance::Float64
 end
 
+"""
+    PruneSolver(; max_iterations, tolerance)
+
+Initialize an incremental pruning solver with the `max_iterations` limit and desired `tolerance`.
+"""
 function PruneSolver(;max_iterations::Int64=10, tolerance::Float64=1e-3)
     return PruneSolver(max_iterations, tolerance)
 end
 
-# alpha vector struct to match alpha vectors to actions
+"""
+    AlphaVec
+
+Alpha vector type of paired vector and action.
+"""
 struct AlphaVec
     alpha::Vector{Float64} # alpha vector
     action::Any # action associated wtih alpha vector
 end
 
-# alpha vector default constructor
+"""
+    AlphaVec(vector, action_index)
+
+Create alpha vector from `vector` and `action_index`.
+"""
 AlphaVec() = AlphaVec([0.0], 0)
 
 # define alpha vector equality
 ==(a::AlphaVec, b::AlphaVec) = (a.alpha,a.action) == (b.alpha, b.action)
 Base.hash(a::AlphaVec, h::UInt) = hash(a.alpha, hash(a.action, h))
 
-# policy struct
-mutable struct PrunePolicy{P<:POMDP, A} <: Policy
-    pomdp::P
-    avecs::Vector{AlphaVec}
-    alphas::Vector{Vector{Float64}}
-    action_map::Vector{A}
-end
+"""
+    create_policy(prune_solver, pomdp)
 
-# policy default constructor
-function PrunePolicy(pomdp::POMDP)
+Create AlphaVectorPolicy for `prune_solver` using immediate rewards from `pomdp`.
+"""
+function create_policy(solver::PruneSolver, pomdp::POMDP)
     ns = n_states(pomdp)
     na = n_actions(pomdp)
     S = ordered_states(pomdp)
     A = ordered_actions(pomdp)
     alphas = [[reward(pomdp,S[i],A[j]) for i in 1:ns] for j in 1:na]
-    avecs = [AlphaVec(alphas[i], A[i]) for i in 1:na]
-    action_map = A
-    PrunePolicy(pomdp, avecs, alphas, action_map)
+    AlphaVectorPolicy(pomdp, alphas)
 end
 
-# policy with alphavec constructor
-function PrunePolicy(pomdp::POMDP, avecs::Vector{AlphaVec})
-    alphas = [avec.alpha for avec in avecs]
-    action_map = [avec.action for avec in avecs]
-    PrunePolicy(pomdp, avecs, alphas, action_map)
-end
-
-create_policy(solver::PruneSolver, pomdp::POMDP) = PrunePolicy(pomdp)
-
-updater(p::PrunePolicy) = DiscreteUpdater(p.pomdp)
+updater(p::AlphaVectorPolicy) = DiscreteUpdater(p.pomdp)
 
 ######## Incrmental Pruning Algorithm #########
 # Accelerated Vector Pruning (Walraven and Spaan 2017)
 
-# cross sum - alpha vectors
+"""
+    xsum(A,B)
+
+Compute the cross-sum of alpha vectors `A` and `B`.
+
+# Examples
+```julia-repl
+julia> a, b, c = AlphaVec([1.0, 2.0], 1), AlphaVec([3.0, 4.0], 1), AlphaVec([5.0, 6.0], 1)
+julia> xsum(Set([a]), Set([b, c]))
+Set(AlphaVec[AlphaVec([6.0, 8.0], 1), AlphaVec([4.0, 6.0], 1)])
+```
+"""
 function xsum(A::Set{AlphaVec}, B::Set{AlphaVec})
     X = Set{AlphaVec}()
     for a in A, b in B
@@ -69,11 +83,11 @@ function xsum(A::Set{AlphaVec}, B::Set{AlphaVec})
     X
 end
 
-# cross sum - arrays
+
 """
     xsum(A,B)
 
-Compute the cross-sum of `A` and `B`.
+Compute the cross-sum of vectors `A` and `B`.
 
 # Examples
 ```julia-repl
@@ -89,8 +103,11 @@ function xsum(A::Set{Array{Float64,1}}, B::Set{Array{Float64,1}})
     X
 end
 
-# dominate(α,A)
-# (Cassandra, Littman, Zhang 1997)
+"""
+    dominate(α, A)
+
+The set of vectors in `A` dominated by `α`.
+"""
 function dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}})
     ns = length(α)
     αset = Set{Array{Float64,1}}()
@@ -129,8 +146,11 @@ function dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}})
     end
 end # dominate
 
-# filtervec(F,S)
-# (Cassandra, Littman, Zhang 1997)
+"""
+    filtervec(F)
+
+The set of vectors in `F` that contribute to the value function.
+"""
 function filtervec(F::Set{Array{Float64,1}})
     ns = length(sum(F))
     W = Set{Array{Float64,1}}()
@@ -181,7 +201,11 @@ function filtervec(F::Set{Array{Float64,1}})
     W
 end # filtervec
 
-# filtervec for alpha vectors
+"""
+    filtervec(F)
+
+The set of alpha vectors in `F` that contribute to the value function.
+"""
 function filtervec(A::Set{AlphaVec})
     ns = [length(av.alpha) for av in A][1]
     W = Set{AlphaVec}()
@@ -232,9 +256,12 @@ function filtervec(A::Set{AlphaVec})
     W
 end # filtervec
 
-# incprune function
-# (Cassandra, Littman, Zhang 1997)
-function incprune(SZ::Array{Set{Array{Float64,1}},1})
+"""
+    incprune(Sz)
+
+Standard incremental pruning of the set of vectors `Sz`.
+"""
+function incprune(SZ::Vector{Set{Vector{Float64}}})
     W = filtervec(xsum(SZ[1], SZ[2]))
     for i = 3:length(SZ)
         W = filtervec(xsum(W, SZ[i]))
@@ -242,8 +269,11 @@ function incprune(SZ::Array{Set{Array{Float64,1}},1})
     W
 end # incprune
 
-# dynamic programming backup value
-# (Cassandra, Littman, Zhang 1997)
+"""
+    dpval(α, a, z, pomdp)
+
+Dynamic programming backup value of `α` for action `a` and observation `z` in `pomdp`.
+"""
 function dpval(α::Array{Float64,1}, a, z, prob::POMDP)
     S = ordered_states(prob)
     A = ordered_actions(prob)
@@ -265,8 +295,11 @@ function dpval(α::Array{Float64,1}, a, z, prob::POMDP)
     τ
 end
 
-# dynamic programming update
-# (Cassandra, Littman, Zhang 1997)
+"""
+    dpupdate(F, pomdp)
+
+Dynamic programming update of `pomdp` for the set of alpha vectors `F`.
+"""
 function dpupdate(F::Set{AlphaVec}, prob::POMDP)
     alphas = [avec.alpha for avec in F]
     A = ordered_actions(prob)
@@ -277,7 +310,7 @@ function dpupdate(F::Set{AlphaVec}, prob::POMDP)
     # tcount = 0
     Sa = Set{AlphaVec}()
     for (aind, a) in enumerate(A)
-        Sz = Array{Set{Array{Float64,1}},1}(nz)
+        Sz = Vector{Set{Vector{Float64}}}(nz)
         for (zind, z) in enumerate(Z)
             # tcount += 1
             # println("DP Update Inner Loop: $tcount")
@@ -291,8 +324,12 @@ function dpupdate(F::Set{AlphaVec}, prob::POMDP)
     filtervec(Sp)
 end
 
-# Find maximum difference between new value function and old value function
-function diffvalue(Vnew::Array{AlphaVec,1},Vold::Array{AlphaVec,1},pomdp::POMDP)
+"""
+    diffvalue(Vnew, Vold, pomdp)
+
+Maximum difference between new alpha vectors `Vnew` and old alpha vectors `Vold` in `pomdp`.
+"""
+function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP)
     ns = n_states(pomdp) # number of states in alpha vector
     S = ordered_states(pomdp)
     A = ordered_actions(pomdp)
@@ -333,13 +370,18 @@ function diffvalue(Vnew::Array{AlphaVec,1},Vold::Array{AlphaVec,1},pomdp::POMDP)
     dmax
 end
 
-# solve POMDP with incremental pruning
+"""
+    solve(solver::PruneSolver, pomdp)
+
+AlphaVectorPolicy for `pomdp` caluclated by the incremental pruning algorithm. 
+"""
 function solve(solver::PruneSolver, prob::POMDP)
     # println("Solver started...")
     ϵ = solver.tolerance
     replimit = solver.max_iterations
-    policy = PrunePolicy(prob)
-    Vold = Set(policy.avecs)
+    policy = create_policy(solver, prob)
+    avecs = [AlphaVec(policy.alphas[i], policy.action_map[i]) for i in 1:length(policy.action_map)]
+    Vold = Set(avecs)
     Vnew = Set{AlphaVec}()
     del = Inf
     reps = 0
@@ -349,13 +391,15 @@ function solve(solver::PruneSolver, prob::POMDP)
         del = diffvalue(collect(Vnew), collect(Vold), prob)
         Vold = Vnew
     end
-    policy = PrunePolicy(prob, collect(Vnew))
+    alphas_new = [v.alpha for v in Vnew]
+    actions_new = [v.action for v in Vnew]
+    policy = AlphaVectorPolicy(prob, alphas_new, actions_new)
     return policy
 end
 
-alphas(policy::PrunePolicy) = policy.alphas
+alphas(policy::AlphaVectorPolicy) = policy.alphas
 
-function action(policy::PrunePolicy, b::DiscreteBelief)
+function action(policy::AlphaVectorPolicy, b::DiscreteBelief)
     alphas = policy.alphas
     nvec = length(alphas) # number of alpha vectors
     ns = length(alphas[1]) # number of states in first alpha vector
@@ -366,7 +410,7 @@ function action(policy::PrunePolicy, b::DiscreteBelief)
 end
 
 
-function value(policy::PrunePolicy, b::DiscreteBelief)
+function value(policy::AlphaVectorPolicy, b::DiscreteBelief)
     alphas = policy.alphas
     nvec = length(alphas) # number of alpha vectors
     ns = length(alphas[1]) # number of states in first alpha vector
@@ -375,23 +419,23 @@ function value(policy::PrunePolicy, b::DiscreteBelief)
     return maximum(util)
 end
 
-function value(policy::PrunePolicy, b)
+function value(policy::AlphaVectorPolicy, b)
     if isa(b, state_type(policy.pomdp))
         return state_value(policy, b)
     end
     return value(policy, DiscreteBelief(belief_vector(policy, b)))
 end
 
-function state_value(policy::PrunePolicy, s)
+function state_value(policy::AlphaVectorPolicy, s)
     si = state_index(policy.pomdp, s)
     maximum(alpha[si] for alpha in policy.alphas)
 end
 
-function action(policy::PrunePolicy, b)
+function action(policy::AlphaVectorPolicy, b)
     return action(policy, DiscreteBelief(belief_vector(policy, b)))
 end
 
-function belief_vector(policy::PrunePolicy, b)
+function belief_vector(policy::AlphaVectorPolicy, b)
     bv = Array{Float64}(n_states(policy.pomdp))
     for (i,s) in enumerate(ordered_states(policy.pomdp))
         bv[i] = pdf(b, s)
@@ -399,7 +443,7 @@ function belief_vector(policy::PrunePolicy, b)
     return bv
 end
 
-function unnormalized_util(policy::PrunePolicy, b::AbstractParticleBelief)
+function unnormalized_util(policy::AlphaVectorPolicy, b::AbstractParticleBelief)
     util = zeros(n_actions(policy.pomdp))
     for (i, s) in enumerate(particles(b))
         si = state_index(policy.pomdp, s)
@@ -409,13 +453,13 @@ function unnormalized_util(policy::PrunePolicy, b::AbstractParticleBelief)
     return util
 end
 
-function action(policy::PrunePolicy, b::AbstractParticleBelief)
+function action(policy::AlphaVectorPolicy, b::AbstractParticleBelief)
     util = unnormalized_util(policy, b)
     imax = indmax(util)
     return policy.action_map[imax]
 end
 
-value(policy::PrunePolicy, b::AbstractParticleBelief) = maximum(unnormalized_util(policy, b))/weight_sum(b)
+value(policy::AlphaVectorPolicy, b::AbstractParticleBelief) = maximum(unnormalized_util(policy, b))/weight_sum(b)
 
 @POMDP_require solve(solver::PruneSolver, pomdp::POMDP) begin
     P = typeof(pomdp)
