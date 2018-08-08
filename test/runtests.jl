@@ -2,6 +2,7 @@
 using Base.Test
 using POMDPs, POMDPModels, POMDPToolbox
 using IncrementalPruning
+const IP = IncrementalPruning
 
 @testset "Incremental Pruning Solver" begin
     @testset "Incremental Pruning Functions" begin
@@ -9,34 +10,34 @@ using IncrementalPruning
         # return beleif state point where α dominates all other vectors in A
         α = [0.6, 0.6]
         A = Set([[1.0, -1.0], [0.0, 1.0]])
-        x = dominate(α, A)
+        x = IP.dominate(α, A)
         @test x[1] ≈ 0.667 atol = 0.001
 
         # filter arrays
         # return the set of non-dominated vectors
         A = Set([[1.0, -1.0], [0.0, 1.0], [0.3, 0.2], [0.9, 0.9]])
         B = Set([[1.0, -1.0], [0.0, 1.0], [0.9, 0.9]])
-        Af = filtervec(A)
+        Af = IP.filtervec(A)
         @test Af ⊆ B && B ⊆ Af # set equality
 
         # filter alpha vectors
         # return the set of non-dominated alpha vectors
-        av1 = AlphaVec([1.0, -1.0], 1)
-        av2 = AlphaVec([0.0, 1.0], 1)
-        av3 = AlphaVec([0.3, 0.2], 1)
-        av4 = AlphaVec([0.9, 0.9], 1)
+        av1 = IP.AlphaVec([1.0, -1.0], 1)
+        av2 = IP.AlphaVec([0.0, 1.0], 1)
+        av3 = IP.AlphaVec([0.3, 0.2], 1)
+        av4 = IP.AlphaVec([0.9, 0.9], 1)
         A = Set([av1,av2,av3,av4])
         B = Set([av1,av2,av4])
-        Af = filtervec(A)
+        Af = IP.filtervec(A)
         @test Af ⊆ B && B ⊆ Af # set equality
 
         # cross sum
         # return all cross-combinations of sums
-        A = Set([AlphaVec([1.0, -1.0], 1), AlphaVec([0.0, 1.0], 1)])
-        B = Set([AlphaVec([10.0, 10.0], 1), AlphaVec([20.0, 20.0], 1), AlphaVec([30.0, 30.0], 1)])
-        AB = xsum(A, B)
+        A = Set([IP.AlphaVec([1.0, -1.0], 1), IP.AlphaVec([0.0, 1.0], 1)])
+        B = Set([IP.AlphaVec([10.0, 10.0], 1), IP.AlphaVec([20.0, 20.0], 1), IP.AlphaVec([30.0, 30.0], 1)])
+        AB = IP.xsum(A, B)
         @test length(AB) == 6 # total number of elements
-        @test Set([AlphaVec(pop!(A).alpha + pop!(B).alpha, 1)]) ⊆ AB # arbitrary element is correct
+        @test Set([IP.AlphaVec(pop!(A).alpha + pop!(B).alpha, 1)]) ⊆ AB # arbitrary element is correct
 
         # incprune
         # return the filtered, iterated cross-sum of the inputs
@@ -45,8 +46,8 @@ using IncrementalPruning
         C = Set([[1.0, -3.0], [0.0, 1.0], [0.1, 0.9]])
         D = Set([[1.0, -4.0], [0.0, 1.0], [0.1, 0.9], [0.3, 0.3]])
         SZ = [A, B, C, D]
-        SZref = filtervec(xsum(xsum(xsum(A,B),C),D))
-        SZip = incprune(SZ)
+        SZref = IP.filtervec(IP.xsum(IP.xsum(IP.xsum(A,B),C),D))
+        SZip = IP.incprune(SZ)
         @test SZip ⊆ SZref && SZref ⊆ SZip # set equality
 
         # dpval
@@ -58,15 +59,15 @@ using IncrementalPruning
         z = Z[2] # cry
         α = [-10.0, 0.0] # reward for: [hungry, full]
         valref = [-7.5, -2.5] # N-1 step value of S = [hungry, full]
-        @test dpval(α,a,z,prob) == valref
+        @test IP.dpval(α,a,z,prob) == valref
 
         # dpupdate
         # return value unclear
         prob = BabyPOMDP()
-        av1 = AlphaVec([1.0, -1.0], 1)
-        av2 = AlphaVec([0.0, 1.0], 1)
+        av1 = IP.AlphaVec([1.0, -1.0], 1)
+        av2 = IP.AlphaVec([0.0, 1.0], 1)
         V0 = Set([av1, av2])
-        @test length(dpupdate(V0, prob)) == 3 # not sure why this is 3
+        @test length(IP.dpupdate(V0, prob)) == 3 # not sure why this is 3
     end
 
     @testset "Solver Functions" begin
@@ -94,14 +95,6 @@ using IncrementalPruning
         @test value(tpolicy, b) == 0.8 # α1 dominates
         @test value(tpolicy, b2) == 0.7 # α2 dominates
 
-        # state value
-        # return value function at a state
-        pomdp = TigerPOMDP()
-        ns = n_states(pomdp)
-        tpolicy = AlphaVectorPolicy(pomdp,[[1.0, 0.5], [0.0, 2.0]])
-        @test IncrementalPruning.state_value(tpolicy, false) == 1.0 # α1 dominates
-        @test IncrementalPruning.state_value(tpolicy, true) == 2.0 # α2 dominates
-
         # diff value
         # return maximum difference in value functions
         pomdp = TigerPOMDP()
@@ -111,10 +104,10 @@ using IncrementalPruning
         a3 = [-2.75; 2.75]
         a4 = [-2.8; 2.8]
         a5 = [2.8; 2.8]
-        tX = [AlphaVec(a1, A[1]); AlphaVec(a2, A[2])]
-        tY = [AlphaVec(a3, A[3]), AlphaVec(a4, A[3])]
-        tZ = [AlphaVec(a5, A[3])]
-        @test diffvalue(tY, tX, pomdp) ≈ 6.75 atol = 0.0001
-        @test diffvalue(tZ, tX, pomdp) ≈ 1.2 atol = 0.0001
+        tX = [IP.AlphaVec(a1, A[1]); IP.AlphaVec(a2, A[2])]
+        tY = [IP.AlphaVec(a3, A[3]), IP.AlphaVec(a4, A[3])]
+        tZ = [IP.AlphaVec(a5, A[3])]
+        @test IP.diffvalue(tY, tX, pomdp) ≈ 6.75 atol = 0.0001
+        @test IP.diffvalue(tZ, tX, pomdp) ≈ 1.2 atol = 0.0001
     end
 end

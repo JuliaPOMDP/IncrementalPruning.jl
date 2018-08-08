@@ -56,11 +56,6 @@ function create_policy(solver::PruneSolver, pomdp::POMDP)
     AlphaVectorPolicy(pomdp, alphas)
 end
 
-updater(p::AlphaVectorPolicy) = DiscreteUpdater(p.pomdp)
-
-######## Incrmental Pruning Algorithm #########
-# Accelerated Vector Pruning (Walraven and Spaan 2017)
-
 """
     xsum(A,B)
 
@@ -373,7 +368,7 @@ end
 """
     solve(solver::PruneSolver, pomdp)
 
-AlphaVectorPolicy for `pomdp` caluclated by the incremental pruning algorithm. 
+AlphaVectorPolicy for `pomdp` caluclated by the incremental pruning algorithm.
 """
 function solve(solver::PruneSolver, prob::POMDP)
     # println("Solver started...")
@@ -396,70 +391,6 @@ function solve(solver::PruneSolver, prob::POMDP)
     policy = AlphaVectorPolicy(prob, alphas_new, actions_new)
     return policy
 end
-
-alphas(policy::AlphaVectorPolicy) = policy.alphas
-
-function action(policy::AlphaVectorPolicy, b::DiscreteBelief)
-    alphas = policy.alphas
-    nvec = length(alphas) # number of alpha vectors
-    ns = length(alphas[1]) # number of states in first alpha vector
-    @assert length(b.b) == ns "Length of belief and alpha-vector size mismatch"
-    util = [alphas[i]' * b.b for i = 1:nvec] # utility for each α-vector
-    imax = indmax(util)
-    return policy.action_map[imax] # action associated with max utility for b
-end
-
-
-function value(policy::AlphaVectorPolicy, b::DiscreteBelief)
-    alphas = policy.alphas
-    nvec = length(alphas) # number of alpha vectors
-    ns = length(alphas[1]) # number of states in first alpha vector
-    @assert length(b.b) == ns "Length of belief and alpha-vector size mismatch"
-    util = [alphas[i]' * b.b for i = 1:nvec] # utility for each α-vector
-    return maximum(util)
-end
-
-function value(policy::AlphaVectorPolicy, b)
-    if isa(b, state_type(policy.pomdp))
-        return state_value(policy, b)
-    end
-    return value(policy, DiscreteBelief(belief_vector(policy, b)))
-end
-
-function state_value(policy::AlphaVectorPolicy, s)
-    si = state_index(policy.pomdp, s)
-    maximum(alpha[si] for alpha in policy.alphas)
-end
-
-function action(policy::AlphaVectorPolicy, b)
-    return action(policy, DiscreteBelief(belief_vector(policy, b)))
-end
-
-function belief_vector(policy::AlphaVectorPolicy, b)
-    bv = Array{Float64}(n_states(policy.pomdp))
-    for (i,s) in enumerate(ordered_states(policy.pomdp))
-        bv[i] = pdf(b, s)
-    end
-    return bv
-end
-
-function unnormalized_util(policy::AlphaVectorPolicy, b::AbstractParticleBelief)
-    util = zeros(n_actions(policy.pomdp))
-    for (i, s) in enumerate(particles(b))
-        si = state_index(policy.pomdp, s)
-        as = [alpha[si] for alpha in policy.alphas]
-        util += weight(b, i) * as
-    end
-    return util
-end
-
-function action(policy::AlphaVectorPolicy, b::AbstractParticleBelief)
-    util = unnormalized_util(policy, b)
-    imax = indmax(util)
-    return policy.action_map[imax]
-end
-
-value(policy::AlphaVectorPolicy, b::AbstractParticleBelief) = maximum(unnormalized_util(policy, b))/weight_sum(b)
 
 @POMDP_require solve(solver::PruneSolver, pomdp::POMDP) begin
     P = typeof(pomdp)
