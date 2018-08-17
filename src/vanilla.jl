@@ -394,8 +394,8 @@ end
 
 @POMDP_require solve(solver::PruneSolver, pomdp::POMDP) begin
     P = typeof(pomdp)
-    S = state_type(P)
-    A = action_type(P)
+    S = statetype(P)
+    A = actiontype(P)
     @req discount(::P)
     @req n_states(::P)
     @req n_actions(::P)
@@ -406,10 +406,8 @@ end
     @req state_index(::P,::S)
     as = actions(pomdp)
     ss = states(pomdp)
-    @req iterator(::typeof(as))
-    @req iterator(::typeof(ss))
-    s = first(iterator(ss))
-    a = first(iterator(as))
+    s = first(ss)
+    a = first(as)
     dist = transition(pomdp, s, a)
     D = typeof(dist)
     @req iterator(::D)

@@ -1,0 +1,17 @@
+name = "IncrementalPruning"
+uuid = "82ee451e-1805-57fd-b4f9-e90c19bcb3e9"
+repo = "https://github.com/JuliaPOMDP/IncrementalPruning.jl"
+
+[deps]
+POMDPs = "a93abf59-7444-517b-a68a-c42f96afdd7d"
+JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
+Clp = "e2554f3b-3117-50c0-817c-e040a3ddf72d"
+POMDPModelTools = "ddee4e65-a780-5c57-ad17-2363fca24141"
+POMDPPolicies = "fd2a78ec-a0b2-11e8-254f-71ff51514d6b"
+
+[extras]
+POMDPModels = "355abbd5-f08e-5560-ac9e-8b5f2592a0ca"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["POMDPModels", "Test"]
