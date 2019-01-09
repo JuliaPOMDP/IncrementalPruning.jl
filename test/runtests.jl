@@ -1,6 +1,6 @@
-
-using Base.Test
-using POMDPs, POMDPModels, POMDPToolbox
+using Test
+using POMDPs, POMDPModels
+using POMDPPolicies, POMDPModelTools, POMDPTesting, BeliefUpdaters
 using IncrementalPruning
 const IP = IncrementalPruning
 
@@ -58,7 +58,7 @@ const IP = IncrementalPruning
         a = A[1] # feed
         z = Z[2] # cry
         α = [-10.0, 0.0] # reward for: [hungry, full]
-        valref = [-7.5, -2.5] # N-1 step value of S = [hungry, full]
+        valref = [-0.81, -5.0] # N-1 step value of S = [hungry, full]
         @test IP.dpval(α,a,z,prob) == valref
 
         # dpupdate
@@ -67,7 +67,7 @@ const IP = IncrementalPruning
         av1 = IP.AlphaVec([1.0, -1.0], 1)
         av2 = IP.AlphaVec([0.0, 1.0], 1)
         V0 = Set([av1, av2])
-        @test length(IP.dpupdate(V0, prob)) == 3 # not sure why this is 3
+        @test length(IP.dpupdate(V0, prob)) == 2 # not sure why this is 2
     end
 
     @testset "Solver Functions" begin
