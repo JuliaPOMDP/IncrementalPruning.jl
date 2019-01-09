@@ -1,16 +1,16 @@
 language: julia
 os:
   - linux
+
 julia:
   - 1.0
+
 notifications:
-  email:
-    - keith.andrew.j@gmail.com
-branches:
-  except:
-  - robust
+  email: false
+
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-  - julia --check-bounds=yes -e 'import Pkg; Pkg.clone("https://github.com/JuliaPOMDP/IncrementalPruning.jl"); Pkg.build("IncrementalPruning"); Pkg.test("IncrementalPruning"; coverage=true)'
+  - julia -e 'using Pkg; Pkg.clone("https://github.com/JuliaPOMDP/IncrementalPruning.jl"); Pkg.build("IncrementalPruning"); Pkg.test("IncrementalPruning"; coverage=true)'
+
 after_success:
   - julia -e 'cd(Pkg.dir("IncrementalPruning")); import Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
