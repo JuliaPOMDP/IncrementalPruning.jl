@@ -1,7 +1,8 @@
-julia 0.6
-POMDPs
-POMDPModels
-POMDPToolbox
-ParticleFilters
-JuMP
+julia 1.0
 Clp
+JuMP
+LinearAlgebra
+ParticleFilters
+POMDPModels
+POMDPs
+POMDPToolbox
