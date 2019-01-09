@@ -1,6 +1,6 @@
 
-using Base.Test
-using POMDPs, POMDPModels, POMDPToolbox
+using Test
+using POMDPs, POMDPModels, POMDPModelTools
 using IncrementalPruning
 const IP = IncrementalPruning
 
