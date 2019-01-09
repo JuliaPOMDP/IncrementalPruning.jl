@@ -12,6 +12,6 @@ branches:
 script:
   - git clone https://github.com/JuliaRegistries/General  $(julia -e 'import Pkg; println(joinpath(Pkg.depots1(), "registries", "General"))')
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-  - julia --check-bounds=yes -e 'import Pkg; Pkg.clone(pwd()); Pkg.build("IncrementalPruning"); Pkg.test("IncrementalPruning"; coverage=true)'
+  - julia --check-bounds=yes -e 'import Pkg; Pkg.build(); Pkg.test("IncrementalPruning"; coverage=true)'
 after_success:
   - julia -e 'cd(Pkg.dir("IncrementalPruning")); import Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
