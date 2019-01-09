@@ -1,9 +1,8 @@
 module IncrementalPruning
 
-using POMDPs
-using POMDPToolbox
+using LinearAlgebra
+using POMDPs, POMDPModelTools, POMDPPolicies
 using ParticleFilters
-
 using JuMP, Clp
 
 import POMDPs: Solver, Policy

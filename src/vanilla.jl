@@ -275,7 +275,7 @@ function dpval(α::Array{Float64,1}, a, z, prob::POMDP)
     ns = n_states(prob)
     nz = n_observations(prob)
     γ = discount(prob)
-    τ = Array{Float64,1}(ns)
+    τ = Array{Float64,1}(undef, ns)
     for (sind,s) in enumerate(S)
         dist_t = transition(prob,s,a)
         exp_sum = 0.0
@@ -305,7 +305,7 @@ function dpupdate(F::Set{AlphaVec}, prob::POMDP)
     # tcount = 0
     Sa = Set{AlphaVec}()
     for (aind, a) in enumerate(A)
-        Sz = Vector{Set{Vector{Float64}}}(nz)
+        Sz = Vector{Set{Vector{Float64}}}(undef, nz)
         for (zind, z) in enumerate(Z)
             # tcount += 1
             # println("DP Update Inner Loop: $tcount")
