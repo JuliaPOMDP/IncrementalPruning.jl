@@ -1,5 +1,6 @@
 using Test
-using POMDPs, POMDPModels, POMDPModelTools, POMDPTesting, BeliefUpdaters
+using POMDPs, POMDPModels
+using POMDPPolicies, POMDPModelTools, POMDPTesting, BeliefUpdaters
 using IncrementalPruning
 const IP = IncrementalPruning
 
