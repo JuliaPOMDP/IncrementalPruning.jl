@@ -53,7 +53,7 @@ function create_policy(solver::PruneSolver, pomdp::POMDP)
     S = ordered_states(pomdp)
     A = ordered_actions(pomdp)
     alphas = [[reward(pomdp,S[i],A[j]) for i in 1:ns] for j in 1:na]
-    AlphaVectorPolicy(pomdp, alphas)
+    AlphaVectorPolicy(pomdp, alphas, A)
 end
 
 """
