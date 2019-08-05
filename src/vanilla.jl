@@ -108,7 +108,7 @@ function dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}})
     αset = Set{Array{Float64,1}}()
     push!(αset, α)
     Adiff = setdiff(A,αset)
-    L = Model(with_optimizer(Clp.Optimizer, LogLevel = 0))
+    L = Model(JuMP.with_optimizer(Clp.Optimizer, LogLevel = 0))
     @variable(L, x[1:ns])
     @variable(L, δ)
     @objective(L, Max, δ)
@@ -124,8 +124,8 @@ function dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}})
         # println("Size of ap: $dap")
         @constraint(L, dot(x, α) >= δ + dot(x, ap))
     end
-    optimize!(L)
-    sol_status = termination_status(L)
+    JuMP.optimize!(L)
+    sol_status = JuMP.termination_status(L)
     if sol_status == :Infeasible
         return :Perp
         # println("Perp")
@@ -333,7 +333,7 @@ function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP)
     Aold = [avec.alpha for avec in Vold]
     dmax = -Inf # max difference
     for avecnew in Anew
-        L = Model(with_optimizer(Clp.Optimizer, LogLevel = 0))
+        L = Model(JuMP.with_optimizer(Clp.Optimizer, LogLevel = 0))
         @variable(L, x[1:ns])
         @variable(L, t)
         @objective(L, Max, t)
@@ -343,13 +343,13 @@ function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP)
         for avecold in Aold
             @constraint(L, (avecnew - avecold)' * x >= t)
         end
-        optimize!(L)
-        dmax = max(dmax, objective_value(L))
+        JuMP.optimize!(L)
+        dmax = max(dmax, JuMP.objective_value(L))
     end
     rmin = minimum(reward(pomdp,s,a) for s in S, a in A) # minimum reward
     if rmin < 0 # if negative rewards, find max difference from old to new
         for avecold in Aold
-            L = Model(with_optimizer(Clp.Optimizer, LogLevel = 0))
+            L = Model(JuMP.with_optimizer(Clp.Optimizer, LogLevel = 0))
             @variable(L, x[1:ns])
             @variable(L, t)
             @objective(L, Max, t)
@@ -359,8 +359,8 @@ function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP)
             for avecnew in Anew
                 @constraint(L, (avecold - avecnew)' * x >= t)
             end
-            optimize!(L)
-            dmax = max(dmax, objective_value(L))
+            JuMP.optimize!(L)
+            dmax = max(dmax, JuMP.objective_value(L))
         end
     end
     dmax
