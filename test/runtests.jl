@@ -81,27 +81,10 @@ const IP = IncrementalPruning
         # return best action at a belief
         pomdp = TigerPOMDP()
         ns = n_states(pomdp)
-<<<<<<< HEAD
         tpolicy = AlphaVectorPolicy(pomdp, [zeros(ns), ones(ns)], ordered_actions(pomdp))
         b = DiscreteBelief(pomdp, [0.8,0.2])
         @test action(tpolicy,b) == 1 # action "1" is optimal (action index = 2)
 
-=======
-        tpolicy = AlphaVectorPolicy(pomdp,[zeros(ns), ones(ns)], ordered_actions(pomdp))
-        b = DiscreteBelief(pomdp, [0.8,0.2])
-        @test action(tpolicy,b) == 1 # action "1" is optimal (action index = 2)
-
-        # value
-        # return value function at a belief
-        pomdp = TigerPOMDP()
-        ns = n_states(pomdp)
-        tpolicy = AlphaVectorPolicy(pomdp,[[1.0, 0.0], [0.0, 1.0]], ordered_actions(pomdp))
-        b = DiscreteBelief(pomdp, [0.8,0.2])
-        b2 = DiscreteBelief(pomdp, [0.3,0.7])
-        @test value(tpolicy, b) == 0.8 # α1 dominates
-        @test value(tpolicy, b2) == 0.7 # α2 dominates
-
->>>>>>> 2e8edf5318cb8e9a51054e16e6a65cb01a265ccb
         # diff value
         # return maximum difference in value functions
         pomdp = TigerPOMDP()
