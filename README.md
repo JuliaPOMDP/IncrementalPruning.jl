@@ -8,7 +8,8 @@ This Julia package implements the incremental pruning solver for partially obser
 ## Installation
 
 ```julia
-Pkg.clone("https://github.com/JuliaPOMDP/IncrementalPruning.jl")
+] # enter pkg mode
+add https://github.com/JuliaPOMDP/IncrementalPruning.jl
 ```
 
 ## Usage
