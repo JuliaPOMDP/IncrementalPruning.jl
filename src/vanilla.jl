@@ -53,7 +53,7 @@ function create_policy(solver::PruneSolver, pomdp::POMDP)
     S = ordered_states(pomdp)
     A = ordered_actions(pomdp)
     alphas = [[reward(pomdp,S[i],A[j]) for i in 1:ns] for j in 1:na]
-    AlphaVectorPolicy(pomdp, alphas)
+    AlphaVectorPolicy(pomdp, alphas, A)
 end
 
 """
@@ -108,10 +108,10 @@ function dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}})
     αset = Set{Array{Float64,1}}()
     push!(αset, α)
     Adiff = setdiff(A,αset)
-    L = Model(solver = ClpSolver())
+    L = Model(with_optimizer(Clp.Optimizer, LogLevel = 0))
     @variable(L, x[1:ns])
     @variable(L, δ)
-    @objective(L, :Max, δ)
+    @objective(L, Max, δ)
     @constraint(L, sum(x) == 1)
     @constraint(L, x[1:ns] .<= 1)
     @constraint(L, x[1:ns] .>= 0)
@@ -124,13 +124,14 @@ function dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}})
         # println("Size of ap: $dap")
         @constraint(L, dot(x, α) >= δ + dot(x, ap))
     end
-    sol = JuMP.solve(L)
-    if sol == :Infeasible
+    optimize!(L)
+    sol_status = termination_status(L)
+    if sol_status == :Infeasible
         return :Perp
         # println("Perp")
     else
-        xval = getvalue(x)
-        dval = getvalue(δ)
+        xval = JuMP.value.(x)
+        dval = JuMP.value.(δ)
         if dval > 0
             return xval
             # println("xval")
@@ -332,34 +333,34 @@ function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP)
     Aold = [avec.alpha for avec in Vold]
     dmax = -Inf # max difference
     for avecnew in Anew
-        L = Model(solver = ClpSolver())
+        L = Model(with_optimizer(Clp.Optimizer, LogLevel = 0))
         @variable(L, x[1:ns])
         @variable(L, t)
-        @objective(L, :Max, t)
+        @objective(L, Max, t)
         @constraint(L, x .>= 0)
         @constraint(L, x .<= 1)
         @constraint(L, sum(x) == 1)
         for avecold in Aold
             @constraint(L, (avecnew - avecold)' * x >= t)
         end
-        sol = JuMP.solve(L)
-        dmax = max(dmax, getobjectivevalue(L))
+        optimize!(L)
+        dmax = max(dmax, objective_value(L))
     end
     rmin = minimum(reward(pomdp,s,a) for s in S, a in A) # minimum reward
     if rmin < 0 # if negative rewards, find max difference from old to new
         for avecold in Aold
-            L = Model(solver = ClpSolver())
+            L = Model(with_optimizer(Clp.Optimizer, LogLevel = 0))
             @variable(L, x[1:ns])
             @variable(L, t)
-            @objective(L, :Max, t)
+            @objective(L, Max, t)
             @constraint(L, x .>= 0)
             @constraint(L, x .<= 1)
             @constraint(L, sum(x) == 1)
             for avecnew in Anew
                 @constraint(L, (avecold - avecnew)' * x >= t)
             end
-            sol = JuMP.solve(L)
-            dmax = max(dmax, getobjectivevalue(L))
+            optimize!(L)
+            dmax = max(dmax, objective_value(L))
         end
     end
     dmax
