@@ -111,7 +111,7 @@ function dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}}, optimizer::Mat
     αset = Set{Array{Float64,1}}()
     push!(αset, α)
     Adiff = setdiff(A,αset)
-    L = Model(JuMP.with_optimizer(optimizer, LogLevel = 0))
+    L = Model(JuMP.with_optimizer(optimizer))
     @variable(L, x[1:ns])
     @variable(L, δ)
     @objective(L, Max, δ)
@@ -341,7 +341,7 @@ function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP,op
     Aold = [avec.alpha for avec in Vold]
     dmax = -Inf # max difference
     for avecnew in Anew
-        L = Model(JuMP.with_optimizer(optimizer, LogLevel = 0))
+        L = Model(JuMP.with_optimizer(optimizer))
         @variable(L, x[1:ns])
         @variable(L, t)
         @objective(L, Max, t)
@@ -357,7 +357,7 @@ function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP,op
     rmin = minimum(reward(pomdp,s,a) for s in S, a in A) # minimum reward
     if rmin < 0 # if negative rewards, find max difference from old to new
         for avecold in Aold
-            L = Model(JuMP.with_optimizer(optimizer, LogLevel = 0))
+            L = Model(JuMP.with_optimizer(optimizer))
             @variable(L, x[1:ns])
             @variable(L, t)
             @objective(L, Max, t)
