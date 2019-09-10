@@ -2,6 +2,8 @@
 ########### Incremental Pruning Solver #####################
 ############################################################
 
+using MathOptInterface
+
 """
     PruneSolver <: Solver
 
@@ -104,7 +106,7 @@ end
 
 The set of vectors in `A` dominated by `α`.
 """
-function dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}}, optimizer::MathOptInterface.AbstractOptimizer=GLPK.Optimizer())
+function dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}}, optimizer::MathOptInterface.AbstractOptimizer)
     ns = length(α)
     αset = Set{Array{Float64,1}}()
     push!(αset, α)
@@ -142,13 +144,14 @@ function dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}}, optimizer::Mat
         end
     end
 end # dominate
+@deprecate dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}}) dominate(α, A, GLPK.Optimizer())
 
 """
     filtervec(F)
 
 The set of vectors in `F` that contribute to the value function.
 """
-function filtervec(F::Set{Array{Float64,1}}, optimizer::MathOptInterface.AbstractOptimizer=GLPK.Optimizer())
+function filtervec(F::Set{Array{Float64,1}}, optimizer::MathOptInterface.AbstractOptimizer)
     ns = length(sum(F))
     W = Set{Array{Float64,1}}()
     for i = 1: ns
@@ -197,13 +200,14 @@ function filtervec(F::Set{Array{Float64,1}}, optimizer::MathOptInterface.Abstrac
     setdiff!(W,temp)
     W
 end # filtervec
+@deprecate filtervec(F::Set{Array{Float64,1}}) filtervec(F, GLPK.Optimizer())
 
 """
     filtervec(F)
 
 The set of alpha vectors in `F` that contribute to the value function.
 """
-function filtervec(A::Set{AlphaVec}, optimizer::MathOptInterface.AbstractOptimizer=GLPK.Optimizer())
+function filtervec(A::Set{AlphaVec}, optimizer::MathOptInterface.AbstractOptimizer)
     ns = [length(av.alpha) for av in A][1]
     W = Set{AlphaVec}()
     for i = 1:ns
@@ -252,19 +256,21 @@ function filtervec(A::Set{AlphaVec}, optimizer::MathOptInterface.AbstractOptimiz
     end
     W
 end # filtervec
+@deprecate filtervec(A::Set{AlphaVec}) filtervec(A, GLPK.Optimizer())
 
 """
     incprune(Sz)
 
 Standard incremental pruning of the set of vectors `Sz`.
 """
-function incprune(SZ::Vector{Set{Vector{Float64}}}, optimizer::MathOptInterface.AbstractOptimizer=GLPK.Optimizer())
+function incprune(SZ::Vector{Set{Vector{Float64}}}, optimizer::MathOptInterface.AbstractOptimizer)
     W = filtervec(xsum(SZ[1], SZ[2]), optimizer)
     for i = 3:length(SZ)
         W = filtervec(xsum(W, SZ[i]), optimizer)
     end
     W
 end # incprune
+@deprecate incprune(SZ::Vector{Set{Vector{Float64}}}) incprune(SZ, GLPK.Optimizer())
 
 """
     dpval(α, a, z, pomdp)
@@ -297,7 +303,7 @@ end
 
 Dynamic programming update of `pomdp` for the set of alpha vectors `F`.
 """
-function dpupdate(F::Set{AlphaVec}, prob::POMDP, optimizer::MathOptInterface.AbstractOptimizer=GLPK.Optimizer())
+function dpupdate(F::Set{AlphaVec}, prob::POMDP, optimizer::MathOptInterface.AbstractOptimizer)
     alphas = [avec.alpha for avec in F]
     A = ordered_actions(prob)
     Z = ordered_observations(prob)
@@ -320,13 +326,14 @@ function dpupdate(F::Set{AlphaVec}, prob::POMDP, optimizer::MathOptInterface.Abs
     end
     filtervec(Sp, optimizer)
 end
+@deprecate dpupdate(F::Set{AlphaVec}, prob::POMDP) dpupdate(F, prob, GLPK.Optimizer())
 
 """
     diffvalue(Vnew, Vold, pomdp)
 
 Maximum difference between new alpha vectors `Vnew` and old alpha vectors `Vold` in `pomdp`.
 """
-function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP,optimizer::MathOptInterface.AbstractOptimizer=GLPK.Optimizer())
+function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP,optimizer::MathOptInterface.AbstractOptimizer)
     ns = n_states(pomdp) # number of states in alpha vector
     S = ordered_states(pomdp)
     A = ordered_actions(pomdp)
@@ -366,6 +373,7 @@ function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP,op
     end
     dmax
 end
+@deprecate diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP) diffvalue(Vnew, Vold, pomdp, GLPK.Optimizer())
 
 """
     solve(solver::PruneSolver, pomdp)
