@@ -12,7 +12,7 @@ POMDP solver type using the incremental pruning algorithm.
 mutable struct PruneSolver{O<:MathOptInterface.AbstractOptimizer} <: Solver
     max_iterations::Int64
     tolerance::Float64
-    optimizer::O
+    optimizer::Type{O}
 end
 
 """
@@ -20,7 +20,7 @@ end
 
 Initialize an incremental pruning solver with the `max_iterations` limit and desired `tolerance`.
 """
-function PruneSolver(;max_iterations::Int64=10, tolerance::Float64=1e-3, optimizer::MathOptInterface.AbstractOptimizer=GLPK.Optimizer())
+function PruneSolver(;max_iterations::Int64=10, tolerance::Float64=1e-3, optimizer::MathOptInterface.AbstractOptimizer=GLPK.Optimizer)
     return PruneSolver(max_iterations, tolerance, optimizer)
 end
 
@@ -144,7 +144,7 @@ function dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}}, optimizer::Mat
         end
     end
 end # dominate
-@deprecate dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}}) dominate(α, A, GLPK.Optimizer())
+@deprecate dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}}) dominate(α, A, GLPK.Optimizer)
 
 """
     filtervec(F)
@@ -200,7 +200,7 @@ function filtervec(F::Set{Array{Float64,1}}, optimizer::MathOptInterface.Abstrac
     setdiff!(W,temp)
     W
 end # filtervec
-@deprecate filtervec(F::Set{Array{Float64,1}}) filtervec(F, GLPK.Optimizer())
+@deprecate filtervec(F::Set{Array{Float64,1}}) filtervec(F, GLPK.Optimizer)
 
 """
     filtervec(F)
@@ -256,7 +256,7 @@ function filtervec(A::Set{AlphaVec}, optimizer::MathOptInterface.AbstractOptimiz
     end
     W
 end # filtervec
-@deprecate filtervec(A::Set{AlphaVec}) filtervec(A, GLPK.Optimizer())
+@deprecate filtervec(A::Set{AlphaVec}) filtervec(A, GLPK.Optimizer)
 
 """
     incprune(Sz)
@@ -270,7 +270,7 @@ function incprune(SZ::Vector{Set{Vector{Float64}}}, optimizer::MathOptInterface.
     end
     W
 end # incprune
-@deprecate incprune(SZ::Vector{Set{Vector{Float64}}}) incprune(SZ, GLPK.Optimizer())
+@deprecate incprune(SZ::Vector{Set{Vector{Float64}}}) incprune(SZ, GLPK.Optimizer)
 
 """
     dpval(α, a, z, pomdp)
@@ -326,7 +326,7 @@ function dpupdate(F::Set{AlphaVec}, prob::POMDP, optimizer::MathOptInterface.Abs
     end
     filtervec(Sp, optimizer)
 end
-@deprecate dpupdate(F::Set{AlphaVec}, prob::POMDP) dpupdate(F, prob, GLPK.Optimizer())
+@deprecate dpupdate(F::Set{AlphaVec}, prob::POMDP) dpupdate(F, prob, GLPK.Optimizer)
 
 """
     diffvalue(Vnew, Vold, pomdp)
@@ -373,7 +373,7 @@ function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP,op
     end
     dmax
 end
-@deprecate diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP) diffvalue(Vnew, Vold, pomdp, GLPK.Optimizer())
+@deprecate diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP) diffvalue(Vnew, Vold, pomdp, GLPK.Optimizer)
 
 """
     solve(solver::PruneSolver, pomdp)
