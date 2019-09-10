@@ -1,6 +1,7 @@
 julia 1.0
 GLPK
 JuMP
+MathOptInterface
 LinearAlgebra
 ParticleFilters
 POMDPModels
