@@ -3,7 +3,7 @@ module IncrementalPruning
 using LinearAlgebra
 using POMDPs, POMDPModelTools, POMDPPolicies
 using ParticleFilters
-using JuMP, Clp
+using JuMP, GLPK, MathOptInterface
 
 import POMDPs: Solver, Policy
 import POMDPs: solve, action, value, update, initialize_belief, updater

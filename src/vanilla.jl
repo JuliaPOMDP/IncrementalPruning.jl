@@ -2,6 +2,8 @@
 ########### Incremental Pruning Solver #####################
 ############################################################
 
+using MathOptInterface
+
 """
     PruneSolver <: Solver
 
@@ -10,6 +12,7 @@ POMDP solver type using the incremental pruning algorithm.
 mutable struct PruneSolver <: Solver
     max_iterations::Int64
     tolerance::Float64
+    optimizer_factory::OptimizerFactory
 end
 
 """
@@ -17,8 +20,8 @@ end
 
 Initialize an incremental pruning solver with the `max_iterations` limit and desired `tolerance`.
 """
-function PruneSolver(;max_iterations::Int64=10, tolerance::Float64=1e-3)
-    return PruneSolver(max_iterations, tolerance)
+function PruneSolver(;max_iterations::Int64=10, tolerance::Float64=1e-3, optimizer_factory::OptimizerFactory=JuMP.with_optimizer(GLPK.Optimizer))
+    return PruneSolver(max_iterations, tolerance, optimizer_factory)
 end
 
 """
@@ -103,12 +106,12 @@ end
 
 The set of vectors in `A` dominated by `α`.
 """
-function dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}})
+function dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}}, optimizer_factory::OptimizerFactory)
     ns = length(α)
     αset = Set{Array{Float64,1}}()
     push!(αset, α)
     Adiff = setdiff(A,αset)
-    L = Model(JuMP.with_optimizer(Clp.Optimizer, LogLevel = 0))
+    L = Model(optimizer_factory)
     @variable(L, x[1:ns])
     @variable(L, δ)
     @objective(L, Max, δ)
@@ -141,13 +144,14 @@ function dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}})
         end
     end
 end # dominate
+@deprecate dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}}) dominate(α, A, JuMP.with_optimizer(GLPK.Optimizer))
 
 """
     filtervec(F)
 
 The set of vectors in `F` that contribute to the value function.
 """
-function filtervec(F::Set{Array{Float64,1}})
+function filtervec(F::Set{Array{Float64,1}}, optimizer_factory::OptimizerFactory)
     ns = length(sum(F))
     W = Set{Array{Float64,1}}()
     for i = 1: ns
@@ -175,7 +179,7 @@ function filtervec(F::Set{Array{Float64,1}})
         # println("F After: $F")
         # println("ϕ: $ϕ")
         # println("W: $W")
-        x = dominate(ϕ, W)
+        x = dominate(ϕ, W, optimizer_factory)
         if x != :Perp
             push!(F, ϕ)
             w = Array{Float64,1}()
@@ -196,13 +200,14 @@ function filtervec(F::Set{Array{Float64,1}})
     setdiff!(W,temp)
     W
 end # filtervec
+@deprecate filtervec(F::Set{Array{Float64,1}}) filtervec(F, JuMP.with_optimizer(GLPK.Optimizer))
 
 """
     filtervec(F)
 
 The set of alpha vectors in `F` that contribute to the value function.
 """
-function filtervec(A::Set{AlphaVec})
+function filtervec(A::Set{AlphaVec}, optimizer_factory::OptimizerFactory)
     ns = [length(av.alpha) for av in A][1]
     W = Set{AlphaVec}()
     for i = 1:ns
@@ -232,7 +237,7 @@ function filtervec(A::Set{AlphaVec})
         # println("F After: $F")
         # println("ϕ: $ϕ")
         # println("W: $W")
-        x = dominate(ϕa, Wa)
+        x = dominate(ϕa, Wa, optimizer_factory)
         if x != :Perp
             push!(A, ϕ)
             w = AlphaVec()
@@ -251,19 +256,21 @@ function filtervec(A::Set{AlphaVec})
     end
     W
 end # filtervec
+@deprecate filtervec(A::Set{AlphaVec}) filtervec(A, JuMP.with_optimizer(GLPK.Optimizer))
 
 """
     incprune(Sz)
 
 Standard incremental pruning of the set of vectors `Sz`.
 """
-function incprune(SZ::Vector{Set{Vector{Float64}}})
-    W = filtervec(xsum(SZ[1], SZ[2]))
+function incprune(SZ::Vector{Set{Vector{Float64}}}, optimizer_factory::OptimizerFactory)
+    W = filtervec(xsum(SZ[1], SZ[2]), optimizer_factory)
     for i = 3:length(SZ)
-        W = filtervec(xsum(W, SZ[i]))
+        W = filtervec(xsum(W, SZ[i]), optimizer_factory)
     end
     W
 end # incprune
+@deprecate incprune(SZ::Vector{Set{Vector{Float64}}}) incprune(SZ, JuMP.with_optimizer(GLPK.Optimizer))
 
 """
     dpval(α, a, z, pomdp)
@@ -296,7 +303,7 @@ end
 
 Dynamic programming update of `pomdp` for the set of alpha vectors `F`.
 """
-function dpupdate(F::Set{AlphaVec}, prob::POMDP)
+function dpupdate(F::Set{AlphaVec}, prob::POMDP, optimizer_factory::OptimizerFactory)
     alphas = [avec.alpha for avec in F]
     A = ordered_actions(prob)
     Z = ordered_observations(prob)
@@ -312,20 +319,21 @@ function dpupdate(F::Set{AlphaVec}, prob::POMDP)
             # println("DP Update Inner Loop: $tcount")
             V = Set(dpval(α,a,z,prob) for α in alphas)
             # println("V: $V")
-            Sz[zind] = filtervec(V)
+            Sz[zind] = filtervec(V, optimizer_factory)
         end
         Sa = Set([AlphaVec(α,a) for α in incprune(Sz)])
         union!(Sp,Sa)
     end
-    filtervec(Sp)
+    filtervec(Sp, optimizer_factory)
 end
+@deprecate dpupdate(F::Set{AlphaVec}, prob::POMDP) dpupdate(F, prob, JuMP.with_optimizer(GLPK.Optimizer))
 
 """
     diffvalue(Vnew, Vold, pomdp)
 
 Maximum difference between new alpha vectors `Vnew` and old alpha vectors `Vold` in `pomdp`.
 """
-function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP)
+function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP,optimizer_factory::OptimizerFactory)
     ns = n_states(pomdp) # number of states in alpha vector
     S = ordered_states(pomdp)
     A = ordered_actions(pomdp)
@@ -333,7 +341,7 @@ function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP)
     Aold = [avec.alpha for avec in Vold]
     dmax = -Inf # max difference
     for avecnew in Anew
-        L = Model(JuMP.with_optimizer(Clp.Optimizer, LogLevel = 0))
+        L = Model(optimizer_factory)
         @variable(L, x[1:ns])
         @variable(L, t)
         @objective(L, Max, t)
@@ -349,7 +357,7 @@ function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP)
     rmin = minimum(reward(pomdp,s,a) for s in S, a in A) # minimum reward
     if rmin < 0 # if negative rewards, find max difference from old to new
         for avecold in Aold
-            L = Model(JuMP.with_optimizer(Clp.Optimizer, LogLevel = 0))
+            L = Model(optimizer_factory)
             @variable(L, x[1:ns])
             @variable(L, t)
             @objective(L, Max, t)
@@ -365,6 +373,7 @@ function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP)
     end
     dmax
 end
+@deprecate diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP) diffvalue(Vnew, Vold, pomdp, JuMP.with_optimizer(GLPK.Optimizer))
 
 """
     solve(solver::PruneSolver, pomdp)
@@ -383,8 +392,8 @@ function solve(solver::PruneSolver, prob::POMDP)
     reps = 0
     while del > ϵ && reps < replimit
         reps += 1
-        Vnew = dpupdate(Vold, prob)
-        del = diffvalue(collect(Vnew), collect(Vold), prob)
+        Vnew = dpupdate(Vold, prob, solver.optimizer_factory)
+        del = diffvalue(collect(Vnew), collect(Vold), prob, solver.optimizer_factory)
         Vold = Vnew
     end
     alphas_new = [v.alpha for v in Vnew]
