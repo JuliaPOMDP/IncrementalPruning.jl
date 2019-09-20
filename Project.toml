@@ -15,6 +15,7 @@ ParticleFilters = "c8b314e2-9260-5cf8-ae76-3be7461ca6d0"
 
 [compat]
 JuMP = "0.19"
+POMDPs = "0.7.3, 0.8"
 
 [extras]
 BeliefUpdaters = "8bb6e9a1-7d73-552c-a44a-e5dc5634aac4"

@@ -51,8 +51,8 @@ Base.hash(a::AlphaVec, h::UInt) = hash(a.alpha, hash(a.action, h))
 Create AlphaVectorPolicy for `prune_solver` using immediate rewards from `pomdp`.
 """
 function create_policy(solver::PruneSolver, pomdp::POMDP)
-    ns = n_states(pomdp)
-    na = n_actions(pomdp)
+    ns = length(states(pomdp))
+    na = length(actions(pomdp))
     S = ordered_states(pomdp)
     A = ordered_actions(pomdp)
     alphas = [[reward(pomdp,S[i],A[j]) for i in 1:ns] for j in 1:na]
@@ -280,8 +280,8 @@ Dynamic programming backup value of `α` for action `a` and observation `z` in `
 function dpval(α::Array{Float64,1}, a, z, prob::POMDP)
     S = ordered_states(prob)
     A = ordered_actions(prob)
-    ns = n_states(prob)
-    nz = n_observations(prob)
+    ns = length(states(prob))
+    nz = length(observations(prob))
     γ = discount(prob)
     τ = Array{Float64,1}(undef, ns)
     for (sind,s) in enumerate(S)
@@ -307,8 +307,8 @@ function dpupdate(F::Set{AlphaVec}, prob::POMDP, optimizer_factory::OptimizerFac
     alphas = [avec.alpha for avec in F]
     A = ordered_actions(prob)
     Z = ordered_observations(prob)
-    na = n_actions(prob)
-    nz = n_observations(prob)
+    na = length(actions(prob))
+    nz = length(observations(prob))
     Sp = Set{AlphaVec}()
     # tcount = 0
     Sa = Set{AlphaVec}()
@@ -334,7 +334,7 @@ end
 Maximum difference between new alpha vectors `Vnew` and old alpha vectors `Vold` in `pomdp`.
 """
 function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP,optimizer_factory::OptimizerFactory)
-    ns = n_states(pomdp) # number of states in alpha vector
+    ns = length(states(pomdp)) # number of states in alpha vector
     S = ordered_states(pomdp)
     A = ordered_actions(pomdp)
     Anew = [avec.alpha for avec in Vnew]
@@ -407,15 +407,15 @@ end
     S = state_type(P)
     A = action_type(P)
     @req discount(::P)
-    @req n_states(::P)
-    @req n_actions(::P)
     @subreq ordered_states(pomdp)
     @subreq ordered_actions(pomdp)
     @req transition(::P,::S,::A)
     @req reward(::P,::S,::A,::S)
     @req state_index(::P,::S)
     as = actions(pomdp)
+    @req length(::typeof(as))
     ss = states(pomdp)
+    @req length(::typeof(ss))
     @req iterator(::typeof(as))
     @req iterator(::typeof(ss))
     s = first(iterator(ss))
