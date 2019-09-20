@@ -1,7 +1,7 @@
 name = "IncrementalPruning"
 uuid = "82ee451e-1805-57fd-b4f9-e90c19bcb3e9"
 repo = "https://github.com/JuliaPOMDP/IncrementalPruning.jl"
-version = "0.2.2"
+version = "0.2.3"
 
 [deps]
 GLPK = "60bf3e95-4087-53dc-ae20-288a0d20c6a6"
