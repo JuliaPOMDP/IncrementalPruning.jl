@@ -2,6 +2,7 @@ module IncrementalPruning
 
 using LinearAlgebra
 using POMDPs, POMDPModelTools, POMDPPolicies
+using POMDPLinter: @POMDP_require
 using JuMP, GLPK
 
 import POMDPs: Solver, Policy

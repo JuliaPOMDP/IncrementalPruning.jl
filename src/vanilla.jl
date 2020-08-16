@@ -2,8 +2,6 @@
 ########### Incremental Pruning Solver #####################
 ############################################################
 
-using MathOptInterface
-
 """
     PruneSolver <: Solver
 
