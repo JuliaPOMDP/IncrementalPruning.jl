@@ -3,6 +3,8 @@ using POMDPs, POMDPModels
 using POMDPPolicies, POMDPModelTools, POMDPTesting, BeliefUpdaters
 using IncrementalPruning
 const IP = IncrementalPruning
+using JuMP
+using GLPK
 
 @testset "Incremental Pruning Solver" begin
     @testset "Incremental Pruning Functions" begin
@@ -10,14 +12,14 @@ const IP = IncrementalPruning
         # return beleif state point where α dominates all other vectors in A
         α = [0.6, 0.6]
         A = Set([[1.0, -1.0], [0.0, 1.0]])
-        x = IP.dominate(α, A)
+        x = IP.dominate(α, A, JuMP.with_optimizer(GLPK.Optimizer))
         @test x[1] ≈ 0.667 atol = 0.001
 
         # filter arrays
         # return the set of non-dominated vectors
         A = Set([[1.0, -1.0], [0.0, 1.0], [0.3, 0.2], [0.9, 0.9]])
         B = Set([[1.0, -1.0], [0.0, 1.0], [0.9, 0.9]])
-        Af = IP.filtervec(A)
+        Af = IP.filtervec(A, JuMP.with_optimizer(GLPK.Optimizer))
         @test Af ⊆ B && B ⊆ Af # set equality
 
         # filter alpha vectors
@@ -28,7 +30,7 @@ const IP = IncrementalPruning
         av4 = IP.AlphaVec([0.9, 0.9], 1)
         A = Set([av1,av2,av3,av4])
         B = Set([av1,av2,av4])
-        Af = IP.filtervec(A)
+        Af = IP.filtervec(A, JuMP.with_optimizer(GLPK.Optimizer))
         @test Af ⊆ B && B ⊆ Af # set equality
 
         # cross sum
@@ -46,8 +48,8 @@ const IP = IncrementalPruning
         C = Set([[1.0, -3.0], [0.0, 1.0], [0.1, 0.9]])
         D = Set([[1.0, -4.0], [0.0, 1.0], [0.1, 0.9], [0.3, 0.3]])
         SZ = [A, B, C, D]
-        SZref = IP.filtervec(IP.xsum(IP.xsum(IP.xsum(A,B),C),D))
-        SZip = IP.incprune(SZ)
+        SZref = IP.filtervec(IP.xsum(IP.xsum(IP.xsum(A,B),C),D), JuMP.with_optimizer(GLPK.Optimizer))
+        SZip = IP.incprune(SZ, JuMP.with_optimizer(GLPK.Optimizer))
         @test SZip ⊆ SZref && SZref ⊆ SZip # set equality
 
         # dpval
@@ -67,7 +69,7 @@ const IP = IncrementalPruning
         av1 = IP.AlphaVec([1.0, -1.0], 1)
         av2 = IP.AlphaVec([0.0, 1.0], 1)
         V0 = Set([av1, av2])
-        @test length(IP.dpupdate(V0, prob)) == 2 # not sure why this is 2
+        @test length(IP.dpupdate(V0, prob, JuMP.with_optimizer(GLPK.Optimizer))) == 2 # not sure why this is 2
     end
 
     @testset "Solver Functions" begin
@@ -97,7 +99,7 @@ const IP = IncrementalPruning
         tX = [IP.AlphaVec(a1, A[1]); IP.AlphaVec(a2, A[2])]
         tY = [IP.AlphaVec(a3, A[3]), IP.AlphaVec(a4, A[3])]
         tZ = [IP.AlphaVec(a5, A[3])]
-        @test IP.diffvalue(tY, tX, pomdp) ≈ 6.75 atol = 0.0001
-        @test IP.diffvalue(tZ, tX, pomdp) ≈ 1.2 atol = 0.0001
+        @test IP.diffvalue(tY, tX, pomdp, JuMP.with_optimizer(GLPK.Optimizer)) ≈ 6.75 atol = 0.0001
+        @test IP.diffvalue(tZ, tX, pomdp, JuMP.with_optimizer(GLPK.Optimizer)) ≈ 1.2 atol = 0.0001
     end
 end

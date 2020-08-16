@@ -321,7 +321,7 @@ function dpupdate(F::Set{AlphaVec}, prob::POMDP, optimizer_factory::OptimizerFac
             # println("V: $V")
             Sz[zind] = filtervec(V, optimizer_factory)
         end
-        Sa = Set([AlphaVec(α,a) for α in incprune(Sz)])
+        Sa = Set([AlphaVec(α,a) for α in incprune(Sz, optimizer_factory)])
         union!(Sp,Sa)
     end
     filtervec(Sp, optimizer_factory)

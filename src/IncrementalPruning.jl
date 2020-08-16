@@ -2,16 +2,14 @@ module IncrementalPruning
 
 using LinearAlgebra
 using POMDPs, POMDPModelTools, POMDPPolicies
-using ParticleFilters
-using JuMP, GLPK, MathOptInterface
+using JuMP, GLPK
 
 import POMDPs: Solver, Policy
 import POMDPs: solve, action, value, update, initialize_belief, updater
 import Base: ==, hash
 
 export
-    PruneSolver,
-    solve
+    PruneSolver
 
 include("vanilla.jl")
 
