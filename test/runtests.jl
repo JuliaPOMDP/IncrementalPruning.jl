@@ -69,7 +69,7 @@ using GLPK
         av1 = IP.AlphaVec([1.0, -1.0], 1)
         av2 = IP.AlphaVec([0.0, 1.0], 1)
         V0 = Set([av1, av2])
-        @test length(IP.dpupdate(V0, prob, JuMP.with_optimizer(GLPK.Optimizer))) == 2 # not sure why this is 2
+        @test length(IP.dpupdate(V0, prob, StateActionReward(prob), JuMP.with_optimizer(GLPK.Optimizer))) == 2 # not sure why this is 2
     end
 
     @testset "Solver Functions" begin
@@ -99,7 +99,7 @@ using GLPK
         tX = [IP.AlphaVec(a1, A[1]); IP.AlphaVec(a2, A[2])]
         tY = [IP.AlphaVec(a3, A[3]), IP.AlphaVec(a4, A[3])]
         tZ = [IP.AlphaVec(a5, A[3])]
-        @test IP.diffvalue(tY, tX, pomdp, JuMP.with_optimizer(GLPK.Optimizer)) ≈ 6.75 atol = 0.0001
-        @test IP.diffvalue(tZ, tX, pomdp, JuMP.with_optimizer(GLPK.Optimizer)) ≈ 1.2 atol = 0.0001
+        @test IP.diffvalue(tY, tX, pomdp, StateActionReward(pomdp), JuMP.with_optimizer(GLPK.Optimizer)) ≈ 6.75 atol = 0.0001
+        @test IP.diffvalue(tZ, tX, pomdp, StateActionReward(pomdp), JuMP.with_optimizer(GLPK.Optimizer)) ≈ 1.2 atol = 0.0001
     end
 end

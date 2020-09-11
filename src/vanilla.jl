@@ -53,7 +53,8 @@ function create_policy(solver::PruneSolver, pomdp::POMDP)
     na = length(actions(pomdp))
     S = ordered_states(pomdp)
     A = ordered_actions(pomdp)
-    alphas = [[reward(pomdp,S[i],A[j]) for i in 1:ns] for j in 1:na]
+    sa_reward = StateActionReward(pomdp)
+    alphas = [[sa_reward(S[i],A[j]) for i in 1:ns] for j in 1:na]
     AlphaVectorPolicy(pomdp, alphas, A)
 end
 
@@ -271,11 +272,11 @@ end # incprune
 @deprecate incprune(SZ::Vector{Set{Vector{Float64}}}) incprune(SZ, JuMP.with_optimizer(GLPK.Optimizer))
 
 """
-    dpval(α, a, z, pomdp)
+    dpval(α, a, z, pomdp, sa_reward=StateActionReward(pomdp))
 
 Dynamic programming backup value of `α` for action `a` and observation `z` in `pomdp`.
 """
-function dpval(α::Array{Float64,1}, a, z, prob::POMDP)
+function dpval(α::Array{Float64,1}, a, z, prob::POMDP, sa_reward::StateActionReward=StateActionReward(prob))
     S = ordered_states(prob)
     A = ordered_actions(prob)
     ns = length(states(prob))
@@ -291,17 +292,17 @@ function dpval(α::Array{Float64,1}, a, z, prob::POMDP)
             po = pdf(dist_o,z)
             exp_sum += α[spind] * po * pt
         end
-        τ[sind] = (1 / nz) * reward(prob,s,a) + γ * exp_sum
+        τ[sind] = (1 / nz) * sa_reward(s,a) + γ * exp_sum
     end
     τ
 end
 
 """
-    dpupdate(F, pomdp)
+    dpupdate(F, pomdp, sa_reward, optimizer_factory)
 
 Dynamic programming update of `pomdp` for the set of alpha vectors `F`.
 """
-function dpupdate(F::Set{AlphaVec}, prob::POMDP, optimizer_factory::OptimizerFactory)
+function dpupdate(F::Set{AlphaVec}, prob::POMDP, sa_reward::StateActionReward, optimizer_factory::OptimizerFactory)
     alphas = [avec.alpha for avec in F]
     A = ordered_actions(prob)
     Z = ordered_observations(prob)
@@ -315,7 +316,7 @@ function dpupdate(F::Set{AlphaVec}, prob::POMDP, optimizer_factory::OptimizerFac
         for (zind, z) in enumerate(Z)
             # tcount += 1
             # println("DP Update Inner Loop: $tcount")
-            V = Set(dpval(α,a,z,prob) for α in alphas)
+            V = Set(dpval(α, a, z, prob, sa_reward) for α in alphas)
             # println("V: $V")
             Sz[zind] = filtervec(V, optimizer_factory)
         end
@@ -324,14 +325,14 @@ function dpupdate(F::Set{AlphaVec}, prob::POMDP, optimizer_factory::OptimizerFac
     end
     filtervec(Sp, optimizer_factory)
 end
-@deprecate dpupdate(F::Set{AlphaVec}, prob::POMDP) dpupdate(F, prob, JuMP.with_optimizer(GLPK.Optimizer))
+@deprecate dpupdate(F::Set{AlphaVec}, prob::POMDP) dpupdate(F, prob, StateActionReward(prob), JuMP.with_optimizer(GLPK.Optimizer))
 
 """
-    diffvalue(Vnew, Vold, pomdp)
+    diffvalue(Vnew, Vold, pomdp, sa_reward, optimizer_factory)
 
 Maximum difference between new alpha vectors `Vnew` and old alpha vectors `Vold` in `pomdp`.
 """
-function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP,optimizer_factory::OptimizerFactory)
+function diffvalue(Vnew::Vector{AlphaVec}, Vold::Vector{AlphaVec}, pomdp::POMDP, sa_reward::StateActionReward, optimizer_factory::OptimizerFactory)
     ns = length(states(pomdp)) # number of states in alpha vector
     S = ordered_states(pomdp)
     A = ordered_actions(pomdp)
@@ -352,7 +353,7 @@ function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP,op
         JuMP.optimize!(L)
         dmax = max(dmax, JuMP.objective_value(L))
     end
-    rmin = minimum(reward(pomdp,s,a) for s in S, a in A) # minimum reward
+    rmin = minimum(sa_reward(s, a) for s in S, a in A) # minimum reward
     if rmin < 0 # if negative rewards, find max difference from old to new
         for avecold in Aold
             L = Model(optimizer_factory)
@@ -371,7 +372,7 @@ function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP,op
     end
     dmax
 end
-@deprecate diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP) diffvalue(Vnew, Vold, pomdp, JuMP.with_optimizer(GLPK.Optimizer))
+@deprecate diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP) diffvalue(Vnew, Vold, pomdp, StateActionReward(pomdp), JuMP.with_optimizer(GLPK.Optimizer))
 
 """
     solve(solver::PruneSolver, pomdp)
@@ -382,17 +383,17 @@ function solve(solver::PruneSolver, prob::POMDP)
     # println("Solver started...")
     ϵ = solver.tolerance
     replimit = solver.max_iterations
-    sa_reward = StateActionReward(prob)
-    policy = create_policy(solver, prob, sa_reward)
+    policy = create_policy(solver, prob)
     avecs = [AlphaVec(policy.alphas[i], policy.action_map[i]) for i in 1:length(policy.action_map)]
     Vold = Set(avecs)
     Vnew = Set{AlphaVec}()
     del = Inf
     reps = 0
+    sa_reward = StateActionReward(prob)
     while del > ϵ && reps < replimit
         reps += 1
-        Vnew = dpupdate(Vold, prob, solver.optimizer_factory)
-        del = diffvalue(collect(Vnew), collect(Vold), prob, solver.optimizer_factory)
+        Vnew = dpupdate(Vold, prob, sa_reward, solver.optimizer_factory)
+        del = diffvalue(collect(Vnew), collect(Vold), prob, sa_reward, solver.optimizer_factory)
         Vold = Vnew
     end
     alphas_new = [v.alpha for v in Vnew]
