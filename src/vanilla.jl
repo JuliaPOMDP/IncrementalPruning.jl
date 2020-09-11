@@ -382,7 +382,8 @@ function solve(solver::PruneSolver, prob::POMDP)
     # println("Solver started...")
     ϵ = solver.tolerance
     replimit = solver.max_iterations
-    policy = create_policy(solver, prob)
+    sa_reward = StateActionReward(prob)
+    policy = create_policy(solver, prob, sa_reward)
     avecs = [AlphaVec(policy.alphas[i], policy.action_map[i]) for i in 1:length(policy.action_map)]
     Vold = Set(avecs)
     Vnew = Set{AlphaVec}()
