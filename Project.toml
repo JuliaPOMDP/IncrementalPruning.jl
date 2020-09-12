@@ -1,7 +1,7 @@
 name = "IncrementalPruning"
 uuid = "82ee451e-1805-57fd-b4f9-e90c19bcb3e9"
 repo = "https://github.com/JuliaPOMDP/IncrementalPruning.jl"
-version = "0.2.4"
+version = "0.2.5"
 
 [deps]
 GLPK = "60bf3e95-4087-53dc-ae20-288a0d20c6a6"
@@ -15,9 +15,9 @@ POMDPs = "a93abf59-7444-517b-a68a-c42f96afdd7d"
 [compat]
 GLPK = "0.10"
 JuMP = "0.19"
-POMDPModelTools = "0.3"
-POMDPPolicies = "0.3.3"
 POMDPLinter = "0.1"
+POMDPModelTools = "0.3.2"
+POMDPPolicies = "0.3.3"
 POMDPs = "0.9"
 
 [extras]
@@ -25,7 +25,8 @@ BeliefUpdaters = "8bb6e9a1-7d73-552c-a44a-e5dc5634aac4"
 POMDPModels = "355abbd5-f08e-5560-ac9e-8b5f2592a0ca"
 POMDPSimulators = "e0d0a172-29c6-5d4e-96d0-f262df5d01fd"
 POMDPTesting = "92e6a534-49c2-5324-9027-86e3c861ab81"
+QuickPOMDPs = "8af83fb2-a731-493c-9049-9e19dbce6165"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["BeliefUpdaters", "POMDPModels", "POMDPSimulators", "POMDPTesting", "Test"]
+test = ["BeliefUpdaters", "POMDPModels", "POMDPSimulators", "POMDPTesting", "QuickPOMDPs", "Test"]
