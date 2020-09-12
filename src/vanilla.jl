@@ -53,7 +53,7 @@ function create_policy(solver::PruneSolver, pomdp::POMDP)
     na = length(actions(pomdp))
     S = ordered_states(pomdp)
     A = ordered_actions(pomdp)
-    sa_reward = StateActionReward(pomdp)
+    sa_reward = LazyCachedSAR(pomdp)
     alphas = [[sa_reward(S[i],A[j]) for i in 1:ns] for j in 1:na]
     AlphaVectorPolicy(pomdp, alphas, A)
 end
@@ -272,11 +272,11 @@ end # incprune
 @deprecate incprune(SZ::Vector{Set{Vector{Float64}}}) incprune(SZ, JuMP.with_optimizer(GLPK.Optimizer))
 
 """
-    dpval(α, a, z, pomdp, sa_reward=StateActionReward(pomdp))
+    dpval(α, a, z, pomdp, sa_reward=LazyCachedSAR(pomdp))
 
 Dynamic programming backup value of `α` for action `a` and observation `z` in `pomdp`.
 """
-function dpval(α::Array{Float64,1}, a, z, prob::POMDP, sa_reward::StateActionReward=StateActionReward(prob))
+function dpval(α::Array{Float64,1}, a, z, prob::POMDP, sa_reward::StateActionReward=LazyCachedSAR(prob))
     S = ordered_states(prob)
     A = ordered_actions(prob)
     ns = length(states(prob))
@@ -287,7 +287,7 @@ function dpval(α::Array{Float64,1}, a, z, prob::POMDP, sa_reward::StateActionRe
         dist_t = transition(prob,s,a)
         exp_sum = 0.0
         for (spind, sp) in enumerate(S)
-            dist_o = observation(prob,a,sp)
+            dist_o = observation(prob, s, a, sp)
             pt = pdf(dist_t,sp)
             po = pdf(dist_o,z)
             exp_sum += α[spind] * po * pt
@@ -325,7 +325,7 @@ function dpupdate(F::Set{AlphaVec}, prob::POMDP, sa_reward::StateActionReward, o
     end
     filtervec(Sp, optimizer_factory)
 end
-@deprecate dpupdate(F::Set{AlphaVec}, prob::POMDP) dpupdate(F, prob, StateActionReward(prob), JuMP.with_optimizer(GLPK.Optimizer))
+@deprecate dpupdate(F::Set{AlphaVec}, prob::POMDP) dpupdate(F, prob, LazyCachedSAR(prob), JuMP.with_optimizer(GLPK.Optimizer))
 
 """
     diffvalue(Vnew, Vold, pomdp, sa_reward, optimizer_factory)
@@ -372,7 +372,7 @@ function diffvalue(Vnew::Vector{AlphaVec}, Vold::Vector{AlphaVec}, pomdp::POMDP,
     end
     dmax
 end
-@deprecate diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP) diffvalue(Vnew, Vold, pomdp, StateActionReward(pomdp), JuMP.with_optimizer(GLPK.Optimizer))
+@deprecate diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP) diffvalue(Vnew, Vold, pomdp, LazyCachedSAR(pomdp), JuMP.with_optimizer(GLPK.Optimizer))
 
 """
     solve(solver::PruneSolver, pomdp)
@@ -389,7 +389,7 @@ function solve(solver::PruneSolver, prob::POMDP)
     Vnew = Set{AlphaVec}()
     del = Inf
     reps = 0
-    sa_reward = StateActionReward(prob)
+    sa_reward = LazyCachedSAR(prob)
     while del > ϵ && reps < replimit
         reps += 1
         Vnew = dpupdate(Vold, prob, sa_reward, solver.optimizer_factory)
