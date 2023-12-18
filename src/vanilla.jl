@@ -10,7 +10,7 @@ POMDP solver type using the incremental pruning algorithm.
 mutable struct PruneSolver <: Solver
     max_iterations::Int64
     tolerance::Float64
-    optimizer_factory::OptimizerFactory
+    optimizer_factory::MathOptInterface.OptimizerWithAttributes
 end
 
 """
@@ -18,7 +18,7 @@ end
 
 Initialize an incremental pruning solver with the `max_iterations` limit and desired `tolerance`.
 """
-function PruneSolver(;max_iterations::Int64=10, tolerance::Float64=1e-3, optimizer_factory::OptimizerFactory=JuMP.with_optimizer(GLPK.Optimizer))
+function PruneSolver(;max_iterations::Int64=10, tolerance::Float64=1e-3, optimizer_factory::MathOptInterface.OptimizerWithAttributes=optimizer_with_attributes(GLPK.Optimizer))
     return PruneSolver(max_iterations, tolerance, optimizer_factory)
 end
 
@@ -105,7 +105,7 @@ end
 
 The set of vectors in `A` dominated by `α`.
 """
-function dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}}, optimizer_factory::OptimizerFactory)
+function dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}}, optimizer_factory::MathOptInterface.OptimizerWithAttributes)
     ns = length(α)
     αset = Set{Array{Float64,1}}()
     push!(αset, α)
@@ -143,14 +143,14 @@ function dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}}, optimizer_fact
         end
     end
 end # dominate
-@deprecate dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}}) dominate(α, A, JuMP.with_optimizer(GLPK.Optimizer))
+@deprecate dominate(α::Array{Float64,1}, A::Set{Array{Float64,1}}) dominate(α, A, optimizer_with_attributes(GLPK.Optimizer))
 
 """
     filtervec(F)
 
 The set of vectors in `F` that contribute to the value function.
 """
-function filtervec(F::Set{Array{Float64,1}}, optimizer_factory::OptimizerFactory)
+function filtervec(F::Set{Array{Float64,1}}, optimizer_factory::MathOptInterface.OptimizerWithAttributes)
     ns = length(sum(F))
     W = Set{Array{Float64,1}}()
     for i = 1: ns
@@ -199,14 +199,14 @@ function filtervec(F::Set{Array{Float64,1}}, optimizer_factory::OptimizerFactory
     setdiff!(W,temp)
     W
 end # filtervec
-@deprecate filtervec(F::Set{Array{Float64,1}}) filtervec(F, JuMP.with_optimizer(GLPK.Optimizer))
+@deprecate filtervec(F::Set{Array{Float64,1}}) filtervec(F, optimizer_with_attributes(GLPK.Optimizer))
 
 """
     filtervec(F)
 
 The set of alpha vectors in `F` that contribute to the value function.
 """
-function filtervec(A::Set{AlphaVec}, optimizer_factory::OptimizerFactory)
+function filtervec(A::Set{AlphaVec}, optimizer_factory::MathOptInterface.OptimizerWithAttributes)
     ns = [length(av.alpha) for av in A][1]
     W = Set{AlphaVec}()
     for i = 1:ns
@@ -255,21 +255,21 @@ function filtervec(A::Set{AlphaVec}, optimizer_factory::OptimizerFactory)
     end
     W
 end # filtervec
-@deprecate filtervec(A::Set{AlphaVec}) filtervec(A, JuMP.with_optimizer(GLPK.Optimizer))
+@deprecate filtervec(A::Set{AlphaVec}) filtervec(A, optimizer_with_attributes(GLPK.Optimizer))
 
 """
     incprune(Sz)
 
 Standard incremental pruning of the set of vectors `Sz`.
 """
-function incprune(SZ::Vector{Set{Vector{Float64}}}, optimizer_factory::OptimizerFactory)
+function incprune(SZ::Vector{Set{Vector{Float64}}}, optimizer_factory::MathOptInterface.OptimizerWithAttributes)
     W = filtervec(xsum(SZ[1], SZ[2]), optimizer_factory)
     for i = 3:length(SZ)
         W = filtervec(xsum(W, SZ[i]), optimizer_factory)
     end
     W
 end # incprune
-@deprecate incprune(SZ::Vector{Set{Vector{Float64}}}) incprune(SZ, JuMP.with_optimizer(GLPK.Optimizer))
+@deprecate incprune(SZ::Vector{Set{Vector{Float64}}}) incprune(SZ, optimizer_with_attributes(GLPK.Optimizer))
 
 """
     dpval(α, a, z, pomdp, sa_reward=LazyCachedSAR(pomdp))
@@ -302,7 +302,7 @@ end
 
 Dynamic programming update of `pomdp` for the set of alpha vectors `F`.
 """
-function dpupdate(F::Set{AlphaVec}, prob::POMDP, sa_reward::StateActionReward, optimizer_factory::OptimizerFactory)
+function dpupdate(F::Set{AlphaVec}, prob::POMDP, sa_reward::StateActionReward, optimizer_factory::MathOptInterface.OptimizerWithAttributes)
     alphas = [avec.alpha for avec in F]
     A = ordered_actions(prob)
     Z = ordered_observations(prob)
@@ -325,14 +325,14 @@ function dpupdate(F::Set{AlphaVec}, prob::POMDP, sa_reward::StateActionReward, o
     end
     filtervec(Sp, optimizer_factory)
 end
-@deprecate dpupdate(F::Set{AlphaVec}, prob::POMDP) dpupdate(F, prob, LazyCachedSAR(prob), JuMP.with_optimizer(GLPK.Optimizer))
+@deprecate dpupdate(F::Set{AlphaVec}, prob::POMDP) dpupdate(F, prob, LazyCachedSAR(prob), optimizer_with_attributes(GLPK.Optimizer))
 
 """
     diffvalue(Vnew, Vold, pomdp, sa_reward, optimizer_factory)
 
 Maximum difference between new alpha vectors `Vnew` and old alpha vectors `Vold` in `pomdp`.
 """
-function diffvalue(Vnew::Vector{AlphaVec}, Vold::Vector{AlphaVec}, pomdp::POMDP, sa_reward::StateActionReward, optimizer_factory::OptimizerFactory)
+function diffvalue(Vnew::Vector{AlphaVec}, Vold::Vector{AlphaVec}, pomdp::POMDP, sa_reward::StateActionReward, optimizer_factory::MathOptInterface.OptimizerWithAttributes)
     ns = length(states(pomdp)) # number of states in alpha vector
     S = ordered_states(pomdp)
     A = ordered_actions(pomdp)
@@ -372,7 +372,7 @@ function diffvalue(Vnew::Vector{AlphaVec}, Vold::Vector{AlphaVec}, pomdp::POMDP,
     end
     dmax
 end
-@deprecate diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP) diffvalue(Vnew, Vold, pomdp, LazyCachedSAR(pomdp), JuMP.with_optimizer(GLPK.Optimizer))
+@deprecate diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP) diffvalue(Vnew, Vold, pomdp, LazyCachedSAR(pomdp), optimizer_with_attributes(GLPK.Optimizer))
 
 """
     solve(solver::PruneSolver, pomdp)
