@@ -15,6 +15,7 @@ POMDPs = "a93abf59-7444-517b-a68a-c42f96afdd7d"
 [compat]
 GLPK = "1"
 JuMP = "1"
+MathOptInterface = "1"
 POMDPLinter = "0.1"
 POMDPTools = "0.1"
 POMDPs = "0.9"
