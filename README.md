@@ -1,7 +1,7 @@
 # IncrementalPruning
 
-[![Build Status](https://travis-ci.org/JuliaPOMDP/IncrementalPruning.jl.svg?branch=master)](https://travis-ci.org/JuliaPOMDP/IncrementalPruning.jl)
-[![Coverage Status](https://coveralls.io/repos/github/JuliaPOMDP/IncrementalPruning.jl/badge.svg?branch=master)](https://coveralls.io/github/JuliaPOMDP/IncrementalPruning.jl?branch=master)
+[![CI](https://github.com/JuliaPOMDP/IncrementalPruning.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/JuliaPOMDP/IncrementalPruning.jl/actions/workflows/CI.yml)
+[![codecov.io](http://codecov.io/github/JuliaPOMDP/IncrementalPruning.jl/coverage.svg?branch=master)](http://codecov.io/github/JuliaPOMDP/IncrementalPruning.jl?branch=master)
 
 This Julia package implements the incremental pruning solver for partially observable Markov decision processes.
 
@@ -10,12 +10,6 @@ This Julia package implements the incremental pruning solver for partially obser
 
 ```Julia
 using Pkg
-# Pkg.Registry.add("https://github.com/JuliaPOMDP/Registry) # for julia 1.1+
-
-# for julia 1.0 add the registry throught the POMDP package
-# Pkg.add("POMDPs")
-# using POMDPs
-# POMDPs.add_registry() 
 Pkg.add("IncrementalPruning")
 ```
 
