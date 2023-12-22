@@ -5,6 +5,7 @@ using POMDPs
 using POMDPLinter: @POMDP_require
 using JuMP, GLPK, MathOptInterface
 using POMDPTools
+using Printf
 
 import POMDPs: Solver, Policy
 import POMDPs: solve, action, value, update, initialize_belief, updater

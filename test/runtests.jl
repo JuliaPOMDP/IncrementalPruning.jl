@@ -7,6 +7,7 @@ const IP = IncrementalPruning
 using JuMP
 using GLPK
 using POMDPs: solve # to resolve ambiguity with JuMP
+using Suppressor
 
 @testset "Incremental Pruning Solver" begin
     @testset "Incremental Pruning Functions" begin
@@ -103,6 +104,31 @@ using POMDPs: solve # to resolve ambiguity with JuMP
         tZ = [IP.AlphaVec(a5, A[3])]
         @test IP.diffvalue(tY, tX, pomdp, StateActionReward(pomdp), optimizer_with_attributes(GLPK.Optimizer)) ≈ 6.75 atol = 0.0001
         @test IP.diffvalue(tZ, tX, pomdp, StateActionReward(pomdp), optimizer_with_attributes(GLPK.Optimizer)) ≈ 1.2 atol = 0.0001
+    end
+    
+    @testset "Solver with Verbosity" begin
+        pomdp = TigerPOMDP()
+        solver = PruneSolver(verbose=true)
+        @test solver.verbose == true
+        
+        output = @capture_out begin
+            policy = solve(solver, pomdp)
+        end
+        
+        # Check if specific strings were printed
+        @test occursin("Solver parameters:", output)
+        @test occursin("max_iterations: $(solver.max_iterations)", output)
+        @test occursin("tolerance: $(solver.tolerance)", output)
+        @test occursin("optimizer_factory:", output)
+        @test occursin("optimizer_constructor: $(solver.optimizer_factory.optimizer_constructor)", output)
+        @test occursin("params: $(solver.optimizer_factory.params)", output)
+        @test occursin("Iter", output)
+        @test occursin("# Vecs", output)
+        @test occursin("eps", output)
+        @test occursin("Tot Time (s)", output)
+        @test occursin("Solver finished!", output)
+        
+        println(output)        
     end
 end
 
