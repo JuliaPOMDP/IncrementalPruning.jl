@@ -11,6 +11,7 @@ mutable struct PruneSolver <: Solver
     max_iterations::Int64
     tolerance::Float64
     optimizer_factory::MathOptInterface.OptimizerWithAttributes
+    verbose::Bool
 end
 
 """
@@ -18,8 +19,13 @@ end
 
 Initialize an incremental pruning solver with the `max_iterations` limit and desired `tolerance`.
 """
-function PruneSolver(;max_iterations::Int64=10, tolerance::Float64=1e-3, optimizer_factory::MathOptInterface.OptimizerWithAttributes=optimizer_with_attributes(GLPK.Optimizer))
-    return PruneSolver(max_iterations, tolerance, optimizer_factory)
+function PruneSolver(;
+    max_iterations::Int64=10, 
+    tolerance::Float64=1e-3, 
+    optimizer_factory::MathOptInterface.OptimizerWithAttributes=optimizer_with_attributes(GLPK.Optimizer),
+    verbose::Bool=false
+)
+    return PruneSolver(max_iterations, tolerance, optimizer_factory, verbose)
 end
 
 """
@@ -380,7 +386,16 @@ end
 AlphaVectorPolicy for `pomdp` caluclated by the incremental pruning algorithm.
 """
 function solve(solver::PruneSolver, prob::POMDP)
-    # println("Solver started...")
+    if solver.verbose
+        println("Solver parameters:")
+        println("   max_iterations: $(solver.max_iterations)")
+        println("   tolerance: $(solver.tolerance)")
+        println("   optimizer_factory: ")
+        println("       optimizer_constructor: $(solver.optimizer_factory.optimizer_constructor)")
+        println("       params: $(solver.optimizer_factory.params)")
+        @printf("\n%5s %8s %15s %12s\n", "Iter", "# Vecs", "eps", "Tot Time (s)")
+    end
+    start_time = time()
     ϵ = solver.tolerance
     replimit = solver.max_iterations
     policy = create_policy(solver, prob)
@@ -395,6 +410,12 @@ function solve(solver::PruneSolver, prob::POMDP)
         Vnew = dpupdate(Vold, prob, sa_reward, solver.optimizer_factory)
         del = diffvalue(collect(Vnew), collect(Vold), prob, sa_reward, solver.optimizer_factory)
         Vold = Vnew
+        if solver.verbose
+            @printf("%5d %8d %15.3e %12.1f\n", reps, length(Vnew), del, time() - start_time)
+        end
+    end
+    if solver.verbose
+        println("Solver finished!")
     end
     alphas_new = [v.alpha for v in Vnew]
     actions_new = [v.action for v in Vnew]
