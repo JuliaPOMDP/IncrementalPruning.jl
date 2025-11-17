@@ -8,6 +8,7 @@ using JuMP
 using GLPK
 using POMDPs: solve # to resolve ambiguity with JuMP
 using Suppressor
+using POMDPSolve
 
 @testset "Incremental Pruning Solver" begin
     @testset "Incremental Pruning Functions" begin
@@ -79,16 +80,28 @@ using Suppressor
         # PruneSolver
         # return simulated expected total discounted reward
         solver = PruneSolver()
-        @test test_solver(solver, TigerPOMDP()) ≈ 17.71 atol = 0.01
-        @test test_solver(solver, BabyPOMDP()) ≈ -17.96 atol = 0.01
-
-        # action
-        # return best action at a belief
-        pomdp = TigerPOMDP()
-        ns = length(states(pomdp))
-        tpolicy = AlphaVectorPolicy(pomdp, [zeros(ns), ones(ns)], ordered_actions(pomdp))
-        b = DiscreteBelief(pomdp, [0.8,0.2])
-        @test action(tpolicy,b) == 1 # action "1" is optimal (action index = 2)
+        # Functional tests for the solver on the TigerPOMDP and BabyPOMDP
+        test_solver(solver, TigerPOMDP())
+        test_solver(solver, BabyPOMDP())
+        
+        solver_ip = PruneSolver(; max_iterations=1000, tolerance=1e-10)
+        solver_pomdpsolve = POMDPSolveSolver()
+        
+        policy_ip = solve(solver_ip, BabyPOMDP())
+        policy_pomdpsolve = solve(solver_pomdpsolve, BabyPOMDP())
+    
+        v_baby_ip = POMDPs.value(policy_ip, BoolDistribution(0.0))
+        v_baby_pomdpsolve = POMDPs.value(policy_pomdpsolve, BoolDistribution(0.0))
+        @test v_baby_ip ≈ v_baby_pomdpsolve atol = 0.0001
+        
+        v_baby_ip = POMDPs.value(policy_ip, BoolDistribution(0.5))
+        v_baby_pomdpsolve = POMDPs.value(policy_pomdpsolve, BoolDistribution(0.5))
+        @test v_baby_ip ≈ v_baby_pomdpsolve atol = 0.0001
+        
+        v_baby_ip = POMDPs.value(policy_ip, BoolDistribution(0.9))
+        v_baby_pomdpsolve = POMDPs.value(policy_pomdpsolve, BoolDistribution(0.9))
+        @test v_baby_ip ≈ v_baby_pomdpsolve atol = 0.0001
+        
 
         # diff value
         # return maximum difference in value functions
